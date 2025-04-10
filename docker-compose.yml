@@ -1,18 +1,16 @@
-version: '3.9'
-
 services:
   db:
     image: postgres:15
     container_name: kanban_db
     restart: always
     environment:
-      POSTGRES_USER: kanban_user
-      POSTGRES_PASSWORD: kanban_pass
-      POSTGRES_DB: kanban_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
 
   migrate:
     image: migrate/migrate
@@ -20,7 +18,10 @@ services:
       - db
     volumes:
       - ./migrations:/migrations
-    command: [ "sh", "-c", "sleep 5 && migrate -path=/migrations -database=postgres://kanban_user:kanban_pass@db:5432/kanban_db?sslmode=disable up" ]
+    command: 
+      - "sh"
+      - "-c"
+      - "sleep 5 && migrate -path=/migrations -database=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable up"
     restart: "on-failure"
 
 volumes:
