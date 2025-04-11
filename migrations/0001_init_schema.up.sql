@@ -12,10 +12,12 @@ CREATE TABLE users (
 -- Boards
 CREATE TABLE boards (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    is_private BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    description TEXT,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
 -- Board members (access control)
