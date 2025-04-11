@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"kanban/internal/config"
+	"kanban/internal/handler"
+	"kanban/internal/repository"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/postgres"
@@ -38,6 +40,10 @@ func Init(cfg *config.Config) (*Server, error) {
 	r := gin.Default()
 
 	// TODO: Add middlewares, routes here later
+	userRepo := repository.NewUserRepository(db)
+	userHandler := handler.NewUserHandler(userRepo)
+
+	r.POST("/register", userHandler.Register)
 
 	return &Server{
 		Engine: r,
