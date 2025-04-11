@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:15
@@ -11,18 +13,26 @@ services:
       - db_data:/var/lib/postgresql/data
     ports:
       - "${DB_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   migrate:
-    image: migrate/migrate
+    image: migrate/migrate:v4.16.2
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
     volumes:
       - ./migrations:/migrations
-    command: 
-      - "sh"
-      - "-c"
-      - "sleep 5 && migrate -path=/migrations -database=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable up"
-    restart: "on-failure"
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
+      - "up"
+    restart: "no"
 
 volumes:
   db_data:
