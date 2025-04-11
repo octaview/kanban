@@ -1,133 +1,150 @@
 package handler
 
 import (
-	"context"
 	"net/http"
-	"strings"
+	"time"
 
 	"kanban/internal/model"
 	"kanban/internal/repository"
-	"kanban/internal/auth"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserHandler struct {
-	repo *repository.UserRepository
+	userRepo *repository.UserRepository
 }
 
-func NewUserHandler(repo *repository.UserRepository) *UserHandler {
-	return &UserHandler{repo: repo}
+func NewUserHandler(userRepo *repository.UserRepository) *UserHandler {
+	return &UserHandler{
+		userRepo: userRepo,
+	}
 }
 
-type registerRequest struct {
+type RegisterRequest struct {
+	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
-	Name     string `json:"name" binding:"required,min=2"`
 	Password string `json:"password" binding:"required,min=6"`
 }
 
-func (h *UserHandler) Register(c *gin.Context) {
-	var req registerRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	req.Email = strings.ToLower(req.Email)
-
-	existing, err := h.repo.FindByEmail(c, req.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "DB error"})
-		return
-	}
-	if existing != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "User already exists"})
-		return
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Hash error"})
-		return
-	}
-
-	user := &model.User{
-		ID:             uuid.New(),
-		Email:          req.Email,
-		Name:           req.Name,
-		HashedPassword: string(hash),
-	}
-
-	if err := h.repo.Create(context.Background(), user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Create failed"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"id":    user.ID,
-		"email": user.Email,
-		"name":  user.Name,
-	})
-}
-
-type loginRequest struct {
+type LoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 }
 
-func (h *UserHandler) Login(c *gin.Context) {
-	var req loginRequest
+type AuthResponse struct {
+	Token string      `json:"token"`
+	User  UserDetails `json:"user"`
+}
+
+type UserDetails struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+func (h *UserHandler) Register(c *gin.Context) {
+	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	user, err := h.repo.FindByEmail(c, strings.ToLower(req.Email))
-	if err != nil || user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+	existingUser, err := h.userRepo.FindByEmail(c.Request.Context(), req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check user existence"})
+		return
+	}
+	
+	if existingUser != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	user := &model.User{
+		Name:           req.Name,
+		Email:          req.Email,
+		HashedPassword: string(hashedPassword),
+	}
+
+	if err := h.userRepo.Create(c.Request.Context(), user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
+
+	token, err := generateToken(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, AuthResponse{
+		Token: token,
+		User: UserDetails{
+			ID:    user.ID.String(),
+			Email: user.Email,
+			Name:  user.Name,
+		},
+	})
+}
+
+func (h *UserHandler) Login(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	user, err := h.userRepo.FindByEmail(c.Request.Context(), req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
+		return
+	}
+
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	token, err := auth.GenerateToken(user.ID.String())
+	token, err := generateToken(user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": token,
+	c.JSON(http.StatusOK, AuthResponse{
+		Token: token,
+		User: UserDetails{
+			ID:    user.ID.String(),
+			Email: user.Email,
+			Name:  user.Name,
+		},
 	})
 }
 
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
-			return
-		}
+func generateToken(userID uuid.UUID) (string, error) {
+	// TODO: Get JWT secret from config
+	jwtSecret := "15ca707144cdccf2e2f4214a33a758b987345347aa6f187ef96d48ac72349f89e98155f664c9060d20ba7a2beb0972a5da52921f9b8a8a7fbddc5a361757d6ac750afc015454591639602d1c0ad78804fe55e2c56762441ec017db5de567bfcf047fb12e77fcae11b7b95a8b0de30176899eee99fa16c836be506ad52d08e45ee479eff25a2073f439b4e9c70a3c38858a17bf7d120b5bfc88e3ed42ee5006152f58ce74f56deaa2f8dd502ef8492dddb7e5dd5212fdbe969369193305711db1ffc65ead3b1c47438095f4da1412ea8b5162fe69033b5ac6d22a9f9661a87b407a9ad60c74f870a64547f067fcc1d97d1684f376259fa3a4d243010259c50318"
 
-		parts := strings.Split(authHeader, "Bearer ")
-		if len(parts) != 2 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Malformed token"})
-			return
-		}
-
-		userID, err := auth.ParseToken(parts[1])
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-			return
-		}
-
-		// можно прикрепить userID к контексту
-		c.Set("user_id", userID)
-		c.Next()
+	claims := jwt.MapClaims{
+		"user_id": userID.String(),
+		"exp":     time.Now().Add(time.Hour * 24 * 7).Unix(),
 	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	
+	return token.SignedString([]byte(jwtSecret))
 }
