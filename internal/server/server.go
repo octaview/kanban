@@ -12,6 +12,7 @@ import (
 
 	"kanban/internal/config"
 	"kanban/internal/handler"
+	"kanban/internal/middleware"
 	"kanban/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -39,14 +40,26 @@ func Init(cfg *config.Config) (*Server, error) {
 	// Setup Gin
 	r := gin.Default()
 
-	// TODO: Add middlewares, routes here later
+	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
-	userHandler := handler.NewUserHandler(userRepo)
+	boardRepo := repository.NewBoardRepository(db)
 
-	//user routes
+	// Initialize handlers
+	userHandler := handler.NewUserHandler(userRepo)
+	boardHandler := handler.NewBoardHandler(boardRepo)
+
+	// Public routes
 	r.POST("/register", userHandler.Register)
 	r.POST("/login", userHandler.Login)
 
+	// Protected routes - require authentication
+	authorized := r.Group("/")
+	authorized.Use(middleware.JWTAuthMiddleware(cfg.JWTSecret))
+	{
+		// Board routes
+		authorized.POST("/boards", boardHandler.Create)
+		// Add more board routes here as needed
+	}
 	return &Server{
 		Engine: r,
 		DB:     db,
