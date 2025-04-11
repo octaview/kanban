@@ -43,7 +43,9 @@ func Init(cfg *config.Config) (*Server, error) {
 	userRepo := repository.NewUserRepository(db)
 	userHandler := handler.NewUserHandler(userRepo)
 
+	//user routes
 	r.POST("/register", userHandler.Register)
+	r.POST("/login", userHandler.Login)
 
 	return &Server{
 		Engine: r,
