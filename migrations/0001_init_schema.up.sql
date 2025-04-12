@@ -21,7 +21,7 @@ CREATE TABLE boards (
 );
 
 -- Board members (access control)
-CREATE TABLE board_users (
+CREATE TABLE board_shares (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     board_id UUID NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
