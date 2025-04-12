@@ -58,6 +58,9 @@ func Init(cfg *config.Config) (*Server, error) {
 	{
 		// Board routes
 		authorized.POST("/boards", boardHandler.Create)
+		authorized.GET("/boards", boardHandler.GetAll)
+		authorized.GET("/boards/:id", boardHandler.GetByID)
+		authorized.PUT("/boards/:id", boardHandler.Update)
 		// Add more board routes here as needed
 	}
 	return &Server{
