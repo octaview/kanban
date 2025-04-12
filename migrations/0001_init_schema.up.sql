@@ -26,6 +26,7 @@ CREATE TABLE board_shares (
     board_id UUID NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('viewer', 'editor')),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (board_id, user_id)
 );
 
