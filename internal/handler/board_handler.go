@@ -14,12 +14,14 @@ import (
 const MaxBoardsPerUser = 5
 
 type BoardHandler struct {
-	boardRepo *repository.BoardRepository
+	boardRepo      *repository.BoardRepository
+	boardShareRepo *repository.BoardShareRepository
 }
 
-func NewBoardHandler(boardRepo *repository.BoardRepository) *BoardHandler {
+func NewBoardHandler(boardRepo *repository.BoardRepository, boardShareRepo *repository.BoardShareRepository) *BoardHandler {
 	return &BoardHandler{
-		boardRepo: boardRepo,
+		boardRepo:      boardRepo,
+		boardShareRepo: boardShareRepo,
 	}
 }
 
@@ -110,14 +112,25 @@ func (h *BoardHandler) GetAll(c *gin.Context) {
 		return
 	}
 
-	boards, err := h.boardRepo.GetOwned(c.Request.Context(), ownerID)
+	// Получаем доски, где пользователь - владелец
+	ownedBoards, err := h.boardRepo.GetOwned(c.Request.Context(), ownerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve boards"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve owned boards"})
 		return
 	}
 
-	response := make([]BoardResponse, len(boards))
-	for i, board := range boards {
+	// Получаем доски, к которым пользователь имеет доступ
+	sharedBoards, err := h.boardShareRepo.GetSharedBoards(c.Request.Context(), ownerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve shared boards"})
+		return
+	}
+
+	// Объединяем результаты
+	allBoards := append(ownedBoards, sharedBoards...)
+	response := make([]BoardResponse, len(allBoards))
+	
+	for i, board := range allBoards {
 		response[i] = BoardResponse{
 			ID:          board.ID.String(),
 			Title:       board.Title,
@@ -164,10 +177,18 @@ func (h *BoardHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Check if user is the owner of the board
+	// Проверяем, является ли пользователь владельцем доски или имеет к ней доступ
 	if board.OwnerID != authenticatedUserID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this board"})
-		return
+		hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, authenticatedUserID, model.RoleViewer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
+			return
+		}
+		
+		if !hasAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this board"})
+			return
+		}
 	}
 
 	// Return board
@@ -214,10 +235,18 @@ func (h *BoardHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Check if user is the owner of the board
+	// Проверяем права доступа на редактирование
 	if board.OwnerID != authenticatedUserID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to update this board"})
-		return
+		hasEditAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, authenticatedUserID, model.RoleEditor)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
+			return
+		}
+		
+		if !hasEditAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to update this board"})
+			return
+		}
 	}
 
 	// Parse request body
