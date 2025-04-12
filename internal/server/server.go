@@ -43,10 +43,12 @@ func Init(cfg *config.Config) (*Server, error) {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db)
 	boardRepo := repository.NewBoardRepository(db)
+	boardShareRepo := repository.NewBoardShareRepository(db)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userRepo)
-	boardHandler := handler.NewBoardHandler(boardRepo)
+	boardHandler := handler.NewBoardHandler(boardRepo, boardShareRepo)
+	boardShareHandler := handler.NewBoardShareHandler(boardRepo, userRepo, boardShareRepo)
 
 	// Public routes
 	r.POST("/register", userHandler.Register)
@@ -61,7 +63,12 @@ func Init(cfg *config.Config) (*Server, error) {
 		authorized.GET("/boards", boardHandler.GetAll)
 		authorized.GET("/boards/:id", boardHandler.GetByID)
 		authorized.PUT("/boards/:id", boardHandler.Update)
-		// Add more board routes here as needed
+		
+		// Board sharing routes
+		authorized.POST("/boards/:id/share", boardShareHandler.ShareBoard)
+		authorized.DELETE("/boards/:id/share/:user_id", boardShareHandler.RemoveShare)
+		authorized.GET("/boards/:id/share", boardShareHandler.GetBoardShares)
+		authorized.GET("/shared-boards", boardShareHandler.GetSharedBoards)
 	}
 	return &Server{
 		Engine: r,
