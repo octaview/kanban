@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
+	"os"
 	"time"
 
 	"kanban/internal/model"
@@ -57,7 +59,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check user existence"})
 		return
 	}
-	
+
 	if existingUser != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 		return
@@ -136,8 +138,10 @@ func (h *UserHandler) Login(c *gin.Context) {
 }
 
 func generateToken(userID uuid.UUID) (string, error) {
-	// TODO: Get JWT secret from config
-	jwtSecret := "15ca707144cdccf2e2f4214a33a758b987345347aa6f187ef96d48ac72349f89e98155f664c9060d20ba7a2beb0972a5da52921f9b8a8a7fbddc5a361757d6ac750afc015454591639602d1c0ad78804fe55e2c56762441ec017db5de567bfcf047fb12e77fcae11b7b95a8b0de30176899eee99fa16c836be506ad52d08e45ee479eff25a2073f439b4e9c70a3c38858a17bf7d120b5bfc88e3ed42ee5006152f58ce74f56deaa2f8dd502ef8492dddb7e5dd5212fdbe969369193305711db1ffc65ead3b1c47438095f4da1412ea8b5162fe69033b5ac6d22a9f9661a87b407a9ad60c74f870a64547f067fcc1d97d1684f376259fa3a4d243010259c50318"
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		return "", errors.New("JWT secret not configured")
+	}
 
 	claims := jwt.MapClaims{
 		"user_id": userID.String(),
@@ -145,6 +149,6 @@ func generateToken(userID uuid.UUID) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	
+
 	return token.SignedString([]byte(jwtSecret))
 }
