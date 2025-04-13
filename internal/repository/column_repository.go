@@ -32,6 +32,12 @@ func (r *ColumnRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Co
 	return &column, nil
 }
 
+func (r *ColumnRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) ([]model.Column, error) {
+	var columns []model.Column
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&columns).Error
+	return columns, err
+}
+
 func (r *ColumnRepository) GetByBoardID(ctx context.Context, boardID uuid.UUID) ([]model.Column, error) {
 	var columns []model.Column
 	err := r.db.WithContext(ctx).Where("board_id = ?", boardID).Order("position").Find(&columns).Error
