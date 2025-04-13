@@ -50,24 +50,18 @@ type ReorderColumnsRequest struct {
 	} `json:"columns" binding:"required"`
 }
 
-// checkBoardAccess проверяет, имеет ли пользователь доступ к доске с указанной ролью
-func (h *ColumnHandler) checkBoardAccess(c *gin.Context, boardID uuid.UUID, userID uuid.UUID, requiredRole model.Role) (bool, error) {
-	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
-	if err != nil {
-		return false, err
-	}
+func (h *ColumnHandler) checkBoardAccess(c *gin.Context, boardID uuid.UUID, userID uuid.UUID, requiredRole string) (bool, error) {
+    board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
+    if err != nil {
+        return false, err
+    }
 
-	if board == nil {
-		return false, nil
-	}
+    if board == nil {
+        return false, nil
+    }
 
-	// Владелец доски имеет полный доступ
-	if board.OwnerID == userID {
-		return true, nil
-	}
-
-	// Проверяем права доступа для других пользователей
-	return h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, userID, requiredRole)
+    // Делегируем проверку прав доступа репозиторию
+    return h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, userID, requiredRole)
 }
 
 // Create создает новую колонку на доске
