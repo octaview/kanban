@@ -44,11 +44,13 @@ func Init(cfg *config.Config) (*Server, error) {
 	userRepo := repository.NewUserRepository(db)
 	boardRepo := repository.NewBoardRepository(db)
 	boardShareRepo := repository.NewBoardShareRepository(db)
+	columnRepo := repository.NewColumnRepository(db)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userRepo)
 	boardHandler := handler.NewBoardHandler(boardRepo, boardShareRepo)
 	boardShareHandler := handler.NewBoardShareHandler(boardRepo, userRepo, boardShareRepo)
+	columnHandler := handler.NewColumnHandler(columnRepo, boardRepo, boardShareRepo)
 
 	// Public routes
 	r.POST("/register", userHandler.Register)
@@ -69,6 +71,14 @@ func Init(cfg *config.Config) (*Server, error) {
 		authorized.DELETE("/boards/:id/share/:user_id", boardShareHandler.RemoveShare)
 		authorized.GET("/boards/:id/share", boardShareHandler.GetBoardShares)
 		authorized.GET("/shared-boards", boardShareHandler.GetSharedBoards)
+
+		// Column routes
+		authorized.POST("/columns", columnHandler.Create)
+		authorized.GET("/boards/:board_id/columns", columnHandler.GetAll)
+		authorized.GET("/columns/:id", columnHandler.GetByID)
+		authorized.PUT("/columns/:id", columnHandler.Update)
+		authorized.DELETE("/columns/:id", columnHandler.Delete)
+		authorized.POST("/boards/:board_id/columns/reorder", columnHandler.ReorderColumns)
 	}
 	return &Server{
 		Engine: r,
