@@ -50,6 +50,7 @@ type ReorderColumnsRequest struct {
 	} `json:"columns" binding:"required"`
 }
 
+// checkBoardAccess проверяет, имеет ли пользователь доступ к доске с указанной ролью
 func (h *ColumnHandler) checkBoardAccess(c *gin.Context, boardID uuid.UUID, userID uuid.UUID, requiredRole model.Role) (bool, error) {
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
@@ -60,14 +61,18 @@ func (h *ColumnHandler) checkBoardAccess(c *gin.Context, boardID uuid.UUID, user
 		return false, nil
 	}
 
+	// Владелец доски имеет полный доступ
 	if board.OwnerID == userID {
 		return true, nil
 	}
 
+	// Проверяем права доступа для других пользователей
 	return h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, userID, requiredRole)
 }
 
+// Create создает новую колонку на доске
 func (h *ColumnHandler) Create(c *gin.Context) {
+	// Получаем ID пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -80,18 +85,21 @@ func (h *ColumnHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Парсим запрос
 	var req CreateColumnRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
+	// Парсим ID доски
 	boardID, err := uuid.Parse(req.BoardID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid board ID format"})
 		return
 	}
 
+	// Проверяем права доступа к доске (требуется роль редактора)
 	hasAccess, err := h.checkBoardAccess(c, boardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check board access"})
@@ -103,8 +111,10 @@ func (h *ColumnHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Определяем позицию для новой колонки
 	position := req.Position
 	if position == 0 {
+		// Если позиция не указана, добавляем в конец
 		maxPosition, err := h.columnRepo.GetMaxPosition(c.Request.Context(), boardID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to determine column position"})
@@ -113,6 +123,7 @@ func (h *ColumnHandler) Create(c *gin.Context) {
 		position = maxPosition + 1
 	}
 
+	// Создаем новую колонку
 	column := &model.Column{
 		BoardID:  boardID,
 		Title:    req.Title,
@@ -124,6 +135,7 @@ func (h *ColumnHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Возвращаем созданную колонку
 	c.JSON(http.StatusCreated, ColumnResponse{
 		ID:       column.ID.String(),
 		BoardID:  column.BoardID.String(),
@@ -132,6 +144,7 @@ func (h *ColumnHandler) Create(c *gin.Context) {
 	})
 }
 
+// GetAll возвращает все колонки указанной доски
 func (h *ColumnHandler) GetAll(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -152,6 +165,7 @@ func (h *ColumnHandler) GetAll(c *gin.Context) {
 		return
 	}
 
+	// Проверяем права на просмотр доски
 	hasAccess, err := h.checkBoardAccess(c, boardID, authenticatedUserID, model.RoleViewer)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check board access"})
@@ -163,12 +177,14 @@ func (h *ColumnHandler) GetAll(c *gin.Context) {
 		return
 	}
 
+	// Получаем все колонки доски, отсортированные по позиции
 	columns, err := h.columnRepo.GetByBoardID(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve columns"})
 		return
 	}
 
+	// Формируем ответ
 	response := make([]ColumnResponse, len(columns))
 	for i, column := range columns {
 		response[i] = ColumnResponse{
@@ -182,6 +198,7 @@ func (h *ColumnHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetByID возвращает колонку по ID
 func (h *ColumnHandler) GetByID(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -202,6 +219,7 @@ func (h *ColumnHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	// Получаем колонку
 	column, err := h.columnRepo.GetByID(c.Request.Context(), columnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
@@ -213,6 +231,7 @@ func (h *ColumnHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	// Проверяем права доступа к доске, которой принадлежит колонка
 	hasAccess, err := h.checkBoardAccess(c, column.BoardID, authenticatedUserID, model.RoleViewer)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check board access"})
@@ -224,6 +243,7 @@ func (h *ColumnHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	// Возвращаем информацию о колонке
 	c.JSON(http.StatusOK, ColumnResponse{
 		ID:       column.ID.String(),
 		BoardID:  column.BoardID.String(),
@@ -232,6 +252,7 @@ func (h *ColumnHandler) GetByID(c *gin.Context) {
 	})
 }
 
+// Update обновляет данные колонки
 func (h *ColumnHandler) Update(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -252,6 +273,7 @@ func (h *ColumnHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// Получаем колонку
 	column, err := h.columnRepo.GetByID(c.Request.Context(), columnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
@@ -263,6 +285,7 @@ func (h *ColumnHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// Проверяем права на редактирование доски
 	hasAccess, err := h.checkBoardAccess(c, column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check board access"})
@@ -274,12 +297,14 @@ func (h *ColumnHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// Парсим запрос
 	var req UpdateColumnRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
+	// Обновляем только предоставленные поля
 	if req.Title != "" {
 		column.Title = req.Title
 	}
@@ -287,11 +312,13 @@ func (h *ColumnHandler) Update(c *gin.Context) {
 		column.Position = req.Position
 	}
 
+	// Сохраняем изменения
 	if err := h.columnRepo.Update(c.Request.Context(), column); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update column"})
 		return
 	}
 
+	// Возвращаем обновленную колонку
 	c.JSON(http.StatusOK, ColumnResponse{
 		ID:       column.ID.String(),
 		BoardID:  column.BoardID.String(),
@@ -300,6 +327,7 @@ func (h *ColumnHandler) Update(c *gin.Context) {
 	})
 }
 
+// Delete удаляет колонку
 func (h *ColumnHandler) Delete(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -320,6 +348,7 @@ func (h *ColumnHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Получаем колонку
 	column, err := h.columnRepo.GetByID(c.Request.Context(), columnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
@@ -331,6 +360,7 @@ func (h *ColumnHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Проверяем права на редактирование доски
 	hasAccess, err := h.checkBoardAccess(c, column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check board access"})
@@ -342,6 +372,7 @@ func (h *ColumnHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Удаляем колонку
 	if err := h.columnRepo.Delete(c.Request.Context(), columnID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete column"})
 		return
@@ -350,6 +381,7 @@ func (h *ColumnHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Column deleted successfully"})
 }
 
+// ReorderColumns изменяет порядок колонок на доске
 func (h *ColumnHandler) ReorderColumns(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -370,6 +402,7 @@ func (h *ColumnHandler) ReorderColumns(c *gin.Context) {
 		return
 	}
 
+	// Проверяем права на редактирование доски
 	hasAccess, err := h.checkBoardAccess(c, boardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check board access"})
@@ -381,36 +414,50 @@ func (h *ColumnHandler) ReorderColumns(c *gin.Context) {
 		return
 	}
 
+	// Парсим запрос
 	var req ReorderColumnsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
+	// Подготавливаем массив колонок для обновления
 	columns := make([]model.Column, len(req.Columns))
+	columnIDs := make([]uuid.UUID, len(req.Columns))
+
+	// Сначала собираем все ID колонок для проверки
 	for i, col := range req.Columns {
 		columnID, err := uuid.Parse(col.ID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid column ID format"})
 			return
 		}
+		columnIDs[i] = columnID
+	}
 
-		column, err := h.columnRepo.GetByID(c.Request.Context(), columnID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
-			return
-		}
+	// Проверяем, что все колонки существуют и принадлежат указанной доске
+	existingColumns, err := h.columnRepo.GetByIDs(c.Request.Context(), columnIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve columns"})
+		return
+	}
 
-		if column == nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Column not found"})
-			return
-		}
+	if len(existingColumns) != len(columnIDs) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Some columns not found"})
+		return
+	}
 
+	// Проверяем, что все колонки принадлежат указанной доске
+	for _, column := range existingColumns {
 		if column.BoardID != boardID {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "All columns must belong to the specified board"})
 			return
 		}
+	}
 
+	// Формируем массив колонок с новыми позициями
+	for i, col := range req.Columns {
+		columnID, _ := uuid.Parse(col.ID) // Парсинг уже проверен выше
 		columns[i] = model.Column{
 			ID:       columnID,
 			Position: col.Position,
@@ -418,6 +465,7 @@ func (h *ColumnHandler) ReorderColumns(c *gin.Context) {
 		}
 	}
 
+	// Обновляем позиции колонок
 	if err := h.columnRepo.ReorderColumns(c.Request.Context(), columns); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder columns"})
 		return
