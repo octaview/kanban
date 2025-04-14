@@ -13,6 +13,13 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
+type UserRepositoryInterface interface {
+	Create(ctx context.Context, user *model.User) error
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
+}
+
+var _ UserRepositoryInterface = (*UserRepository)(nil)
+
 func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
