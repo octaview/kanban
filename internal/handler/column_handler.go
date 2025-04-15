@@ -60,7 +60,12 @@ func (h *ColumnHandler) checkBoardAccess(c *gin.Context, boardID uuid.UUID, user
         return false, nil
     }
 
-    // Делегируем проверку прав доступа репозиторию
+    // If user is the owner, they have full access
+    if board.OwnerID == userID {
+        return true, nil
+    }
+
+    // Otherwise check for shared access
     return h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, userID, requiredRole)
 }
 
