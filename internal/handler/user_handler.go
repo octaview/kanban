@@ -16,14 +16,15 @@ import (
 )
 
 type UserHandler struct {
-    userRepo repository.UserRepositoryInterface // Используем интерфейс вместо конкретного типа
+    userRepo *repository.UserRepository  // Change to concrete type
 }
 
-func NewUserHandler(userRepo repository.UserRepositoryInterface) *UserHandler {
+func NewUserHandler(userRepo *repository.UserRepository) *UserHandler {  // Change parameter type
     return &UserHandler{
         userRepo: userRepo,
     }
 }
+
 type RegisterRequest struct {
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
