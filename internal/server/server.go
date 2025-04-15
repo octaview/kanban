@@ -74,11 +74,11 @@ func Init(cfg *config.Config) (*Server, error) {
 
 		// Column routes
 		authorized.POST("/columns", columnHandler.Create)
-		authorized.GET("/boards/:board_id/columns", columnHandler.GetAll)
+		authorized.GET("/boards/:id/columns", columnHandler.GetAll)
 		authorized.GET("/columns/:id", columnHandler.GetByID)
 		authorized.PUT("/columns/:id", columnHandler.Update)
 		authorized.DELETE("/columns/:id", columnHandler.Delete)
-		authorized.POST("/boards/:board_id/columns/reorder", columnHandler.ReorderColumns)
+		authorized.POST("/boards/:id/columns/reorder", columnHandler.ReorderColumns)
 	}
 	return &Server{
 		Engine: r,
