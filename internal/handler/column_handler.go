@@ -157,7 +157,7 @@ func (h *ColumnHandler) GetAll(c *gin.Context) {
 		return
 	}
 
-	boardIDStr := c.Param("board_id")
+	boardIDStr := c.Param("id")
 	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid board ID format"})
