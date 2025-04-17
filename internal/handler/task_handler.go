@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"kanban/internal/middleware"
@@ -14,11 +13,11 @@ import (
 )
 
 type TaskHandler struct {
-	taskRepo      *repository.TaskRepository
-	columnRepo    *repository.ColumnRepository
-	boardRepo     *repository.BoardRepository
+	taskRepo       *repository.TaskRepository
+	columnRepo     *repository.ColumnRepository
+	boardRepo      *repository.BoardRepository
 	boardShareRepo *repository.BoardShareRepository
-	userRepo      *repository.UserRepository
+	userRepo       *repository.UserRepository
 }
 
 func NewTaskHandler(
@@ -29,11 +28,11 @@ func NewTaskHandler(
 	userRepo *repository.UserRepository,
 ) *TaskHandler {
 	return &TaskHandler{
-		taskRepo:      taskRepo,
-		columnRepo:    columnRepo,
-		boardRepo:     boardRepo,
+		taskRepo:       taskRepo,
+		columnRepo:     columnRepo,
+		boardRepo:      boardRepo,
 		boardShareRepo: boardShareRepo,
-		userRepo:      userRepo,
+		userRepo:       userRepo,
 	}
 }
 
@@ -59,17 +58,17 @@ type TaskAssignRequest struct {
 
 // TaskResponse представляет ответ с данными задачи
 type TaskResponse struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	ColumnID    string    `json:"column_id"`
-	AssignedTo  *string   `json:"assigned_to,omitempty"`
-	AssigneeName *string  `json:"assignee_name,omitempty"`
-	CreatedBy   string    `json:"created_by"`
-	CreatorName string    `json:"creator_name"`
-	DueDate     *string   `json:"due_date,omitempty"`
-	Position    int       `json:"position"`
-	Labels      []LabelResponse `json:"labels,omitempty"`
+	ID           string          `json:"id"`
+	Title        string          `json:"title"`
+	Description  string          `json:"description"`
+	ColumnID     string          `json:"column_id"`
+	AssignedTo   *string         `json:"assigned_to,omitempty"`
+	AssigneeName *string         `json:"assignee_name,omitempty"`
+	CreatedBy    string          `json:"created_by"`
+	CreatorName  string          `json:"creator_name"`
+	DueDate      *string         `json:"due_date,omitempty"`
+	Position     int             `json:"position"`
+	Labels       []LabelResponse `json:"labels,omitempty"`
 }
 
 // LabelResponse представляет ответ с данными метки
@@ -731,6 +730,7 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Task moved successfully"})
 }
+
 // AssignUser назначает пользователя на задачу
 func (h *TaskHandler) AssignUser(c *gin.Context) {
 	// Получаем ID текущего пользователя из контекста
