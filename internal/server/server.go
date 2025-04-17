@@ -45,12 +45,14 @@ func Init(cfg *config.Config) (*Server, error) {
 	boardRepo := repository.NewBoardRepository(db)
 	boardShareRepo := repository.NewBoardShareRepository(db)
 	columnRepo := repository.NewColumnRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userRepo)
 	boardHandler := handler.NewBoardHandler(boardRepo, boardShareRepo)
 	boardShareHandler := handler.NewBoardShareHandler(boardRepo, userRepo, boardShareRepo)
 	columnHandler := handler.NewColumnHandler(columnRepo, boardRepo, boardShareRepo)
+	taskHandler := handler.NewTaskHandler(taskRepo, columnRepo, boardRepo, boardShareRepo, userRepo)
 
 	// Public routes
 	r.POST("/register", userHandler.Register)
@@ -79,6 +81,20 @@ func Init(cfg *config.Config) (*Server, error) {
 		authorized.PUT("/columns/:id", columnHandler.Update)
 		authorized.DELETE("/columns/:id", columnHandler.Delete)
 		authorized.POST("/boards/:id/columns/reorder", columnHandler.ReorderColumns)
+
+		// Task routes - add these lines
+		authorized.POST("/tasks", taskHandler.Create)
+		authorized.GET("/tasks/:id", taskHandler.GetByID)
+		authorized.GET("/columns/:id/tasks", taskHandler.GetByColumnID)
+		authorized.PUT("/tasks/:id", taskHandler.Update)
+		authorized.DELETE("/tasks/:id", taskHandler.Delete)
+		authorized.POST("/tasks/:id/move", taskHandler.MoveTask)
+		authorized.POST("/tasks/:id/assign", taskHandler.AssignUser)
+		authorized.DELETE("/tasks/:id/assign", taskHandler.UnassignUser)
+		authorized.POST("/tasks/:id/labels/:label_id", taskHandler.AddLabel)
+		authorized.DELETE("/tasks/:id/labels/:label_id", taskHandler.RemoveLabel)
+		authorized.GET("/tasks/:id/labels", taskHandler.GetTaskLabels)
+		authorized.POST("/tasks/:id/due-date", taskHandler.SetDueDate)
 	}
 	return &Server{
 		Engine: r,
