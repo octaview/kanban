@@ -46,6 +46,7 @@ func Init(cfg *config.Config) (*Server, error) {
 	boardShareRepo := repository.NewBoardShareRepository(db)
 	columnRepo := repository.NewColumnRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
+	labelRepo := repository.NewLabelRepository(db)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userRepo)
@@ -53,6 +54,7 @@ func Init(cfg *config.Config) (*Server, error) {
 	boardShareHandler := handler.NewBoardShareHandler(boardRepo, userRepo, boardShareRepo)
 	columnHandler := handler.NewColumnHandler(columnRepo, boardRepo, boardShareRepo)
 	taskHandler := handler.NewTaskHandler(taskRepo, columnRepo, boardRepo, boardShareRepo, userRepo)
+	labelHandler := handler.NewLabelHandler(labelRepo, boardRepo, boardShareRepo)
 
 	// Public routes
 	r.POST("/register", userHandler.Register)
@@ -82,7 +84,7 @@ func Init(cfg *config.Config) (*Server, error) {
 		authorized.DELETE("/columns/:id", columnHandler.Delete)
 		authorized.POST("/boards/:id/columns/reorder", columnHandler.ReorderColumns)
 
-		// Task routes - add these lines
+		// Task routes
 		authorized.POST("/tasks", taskHandler.Create)
 		authorized.GET("/tasks/:id", taskHandler.GetByID)
 		authorized.GET("/columns/:id/tasks", taskHandler.GetByColumnID)
@@ -95,6 +97,14 @@ func Init(cfg *config.Config) (*Server, error) {
 		authorized.DELETE("/tasks/:id/labels/:label_id", taskHandler.RemoveLabel)
 		authorized.GET("/tasks/:id/labels", taskHandler.GetTaskLabels)
 		authorized.POST("/tasks/:id/due-date", taskHandler.SetDueDate)
+		
+		// Label routes
+		authorized.POST("/labels", labelHandler.Create)
+		authorized.GET("/labels/:id", labelHandler.GetByID)
+		authorized.GET("/boards/:id/labels", labelHandler.GetByBoardID)
+		authorized.PUT("/labels/:id", labelHandler.Update)
+		authorized.DELETE("/labels/:id", labelHandler.Delete)
+		authorized.GET("/labels/:id/tasks", labelHandler.GetTasksWithLabel)
 	}
 	return &Server{
 		Engine: r,
