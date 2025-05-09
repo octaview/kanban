@@ -37,7 +37,7 @@ func (r *BoardRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Boa
 	var board model.Board
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&board).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // Return nil, nil to indicate that the board was not found
+			return nil, ErrBoardNotFound
 		}
 		return nil, err
 	}

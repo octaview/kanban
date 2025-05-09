@@ -10,10 +10,6 @@ import (
 	"kanban/internal/model"
 )
 
-var (
-	ErrLabelNotFound = errors.New("label not found")
-)
-
 type LabelRepository struct {
 	db *gorm.DB
 }
