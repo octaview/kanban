@@ -11,11 +11,14 @@ import (
 	"time"
 
 	"kanban/internal/config"
+	"kanban/internal/docs"
 	"kanban/internal/handler"
 	"kanban/internal/middleware"
 	"kanban/internal/repository"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -55,6 +58,9 @@ func Init(cfg *config.Config) (*Server, error) {
 	columnHandler := handler.NewColumnHandler(columnRepo, boardRepo, boardShareRepo)
 	taskHandler := handler.NewTaskHandler(taskRepo, columnRepo, boardRepo, boardShareRepo, userRepo)
 	labelHandler := handler.NewLabelHandler(labelRepo, boardRepo, boardShareRepo)
+
+	// Setup Swagger
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Public routes
 	r.POST("/register", userHandler.Register)
@@ -121,12 +127,12 @@ func (s *Server) Run() {
 
 	go func() {
 		log.Printf("🚀 Server running on port %s\n", s.Config.ServerPort)
+		log.Printf("📚 Swagger documentation available at http://localhost:%s/swagger/index.html\n", s.Config.ServerPort)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("❌ Failed to listen: %s\n", err)
 		}
 	}()
 
-	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

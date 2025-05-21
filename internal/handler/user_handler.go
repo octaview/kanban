@@ -16,10 +16,10 @@ import (
 )
 
 type UserHandler struct {
-    userRepo *repository.UserRepository  // Change to concrete type
+    userRepo *repository.UserRepository
 }
 
-func NewUserHandler(userRepo *repository.UserRepository) *UserHandler {  // Change parameter type
+func NewUserHandler(userRepo *repository.UserRepository) *UserHandler {
     return &UserHandler{
         userRepo: userRepo,
     }
@@ -47,6 +47,18 @@ type UserDetails struct {
 	Name  string `json:"name"`
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Description Create a new user account and return authentication token
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "User registration details"
+// @Success 201 {object} AuthResponse "User created successfully with auth token"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 409 {object} map[string]string "User with this email already exists"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -98,6 +110,18 @@ func (h *UserHandler) Register(c *gin.Context) {
 	})
 }
 
+// Login godoc
+// @Summary Authenticate a user
+// @Description Log in with email and password to receive an authentication token
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "User login credentials"
+// @Success 200 {object} AuthResponse "Login successful with auth token"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Invalid credentials"
+// @Failure 500 {object} map[string]string "Server error"
+// @Router /login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

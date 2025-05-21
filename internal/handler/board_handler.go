@@ -43,9 +43,21 @@ type UpdateBoardRequest struct {
 	Description string `json:"description"`
 }
 
-// Create creates a new board for the authenticated user
+// Create godoc
+// @Summary Create a new board
+// @Description Create a new Kanban board for the authenticated user
+// @Tags Boards
+// @Accept json
+// @Produce json
+// @Param request body CreateBoardRequest true "Board creation details"
+// @Success 201 {object} BoardResponse "Board created successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Maximum number of boards reached"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /boards [post]
 func (h *BoardHandler) Create(c *gin.Context) {
-	// Get user ID from context (set by auth middleware)
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -58,7 +70,6 @@ func (h *BoardHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Check if user already has 5 boards
 	count, err := h.boardRepo.CountOwned(c.Request.Context(), ownerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check board count"})
@@ -70,14 +81,12 @@ func (h *BoardHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Parse request body
 	var req CreateBoardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Create new board
 	board := &model.Board{
 		Title:       req.Title,
 		Description: req.Description,
@@ -89,7 +98,6 @@ func (h *BoardHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Return created board
 	c.JSON(http.StatusCreated, BoardResponse{
 		ID:          board.ID.String(),
 		Title:       board.Title,
@@ -99,6 +107,16 @@ func (h *BoardHandler) Create(c *gin.Context) {
 	})
 }
 
+// GetAll godoc
+// @Summary Get all accessible boards
+// @Description Get all boards that the authenticated user owns or has access to
+// @Tags Boards
+// @Produce json
+// @Success 200 {array} BoardResponse "List of boards"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /boards [get]
 func (h *BoardHandler) GetAll(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -112,21 +130,18 @@ func (h *BoardHandler) GetAll(c *gin.Context) {
 		return
 	}
 
-	// Получаем доски, где пользователь - владелец
 	ownedBoards, err := h.boardRepo.GetOwned(c.Request.Context(), ownerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve owned boards"})
 		return
 	}
 
-	// Получаем доски, к которым пользователь имеет доступ
 	sharedBoards, err := h.boardShareRepo.GetSharedBoards(c.Request.Context(), ownerID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve shared boards"})
 		return
 	}
 
-	// Объединяем результаты
 	allBoards := append(ownedBoards, sharedBoards...)
 	response := make([]BoardResponse, len(allBoards))
 	
@@ -143,8 +158,21 @@ func (h *BoardHandler) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetByID godoc
+// @Summary Get a board by ID
+// @Description Get a specific board by its ID if the authenticated user has access
+// @Tags Boards
+// @Produce json
+// @Param id path string true "Board ID"
+// @Success 200 {object} BoardResponse "Board details"
+// @Failure 400 {object} map[string]string "Invalid board ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Board not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /boards/{id} [get]
 func (h *BoardHandler) GetByID(c *gin.Context) {
-	// Get user ID from context (set by auth middleware)
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -157,7 +185,6 @@ func (h *BoardHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Parse board ID from URL
 	boardIDStr := c.Param("id")
 	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
@@ -165,7 +192,6 @@ func (h *BoardHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Get board from repository
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -177,7 +203,6 @@ func (h *BoardHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, является ли пользователь владельцем доски или имеет к ней доступ
 	if board.OwnerID != authenticatedUserID {
 		hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, authenticatedUserID, model.RoleViewer)
 		if err != nil {
@@ -191,7 +216,6 @@ func (h *BoardHandler) GetByID(c *gin.Context) {
 		}
 	}
 
-	// Return board
 	c.JSON(http.StatusOK, BoardResponse{
 		ID:          board.ID.String(),
 		Title:       board.Title,
@@ -201,8 +225,23 @@ func (h *BoardHandler) GetByID(c *gin.Context) {
 	})
 }
 
+// Update godoc
+// @Summary Update a board
+// @Description Update a board's title and/or description if the authenticated user has permission
+// @Tags Boards
+// @Accept json
+// @Produce json
+// @Param id path string true "Board ID"
+// @Param request body UpdateBoardRequest true "Board update details"
+// @Success 200 {object} BoardResponse "Updated board details"
+// @Failure 400 {object} map[string]string "Invalid request or board ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Board not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /boards/{id} [put]
 func (h *BoardHandler) Update(c *gin.Context) {
-	// Get user ID from context (set by auth middleware)
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -215,7 +254,6 @@ func (h *BoardHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Parse board ID from URL
 	boardIDStr := c.Param("id")
 	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
@@ -223,7 +261,6 @@ func (h *BoardHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Get existing board from repository
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -235,7 +272,6 @@ func (h *BoardHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Проверяем права доступа на редактирование
 	if board.OwnerID != authenticatedUserID {
 		hasEditAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, authenticatedUserID, model.RoleEditor)
 		if err != nil {
@@ -249,14 +285,12 @@ func (h *BoardHandler) Update(c *gin.Context) {
 		}
 	}
 
-	// Parse request body
 	var req UpdateBoardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Update board fields if provided
 	if req.Title != "" {
 		board.Title = req.Title
 	}
@@ -264,13 +298,11 @@ func (h *BoardHandler) Update(c *gin.Context) {
 		board.Description = req.Description
 	}
 
-	// Save the updated board
 	if err := h.boardRepo.Update(c.Request.Context(), board); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update board"})
 		return
 	}
 
-	// Return updated board
 	c.JSON(http.StatusOK, BoardResponse{
 		ID:          board.ID.String(),
 		Title:       board.Title,

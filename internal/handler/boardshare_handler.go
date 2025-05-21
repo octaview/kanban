@@ -29,13 +29,15 @@ func NewBoardShareHandler(
 	}
 }
 
-// ShareBoardRequest представляет запрос на предоставление доступа к доске
+// ShareBoardRequest represents request for sharing board access
+// @name ShareBoardRequest
 type ShareBoardRequest struct {
 	Email string `json:"email" binding:"required,email"`
 	Role  string `json:"role" binding:"required,oneof=viewer editor"`
 }
 
-// BoardShareResponse представляет информацию о пользователе с доступом к доске
+// BoardShareResponse represents board share information
+// @name BoardShareResponse
 type BoardShareResponse struct {
 	UserID    string `json:"user_id"`
 	Email     string `json:"email"`
@@ -44,7 +46,22 @@ type BoardShareResponse struct {
 	IsOwner   bool   `json:"is_owner"`
 }
 
-// ShareBoard предоставляет доступ к доске по email пользователя
+// ShareBoard shares board with another user
+// @Summary Share board
+// @Description Share board access with another user by email (owner only)
+// @Tags board-sharing
+// @Accept json
+// @Produce json
+// @Param id path string true "Board ID"
+// @Param input body ShareBoardRequest true "Share data"
+// @Success 200 {object} object{message=string,share=BoardShareResponse}
+// @Failure 400 {object} object "Invalid request"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Not board owner"
+// @Failure 404 {object} object "Board or user not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security ApiKeyAuth
+// @Router /boards/{id}/share [post]
 func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
 	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -128,7 +145,21 @@ func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
 	})
 }
 
-// RemoveShare удаляет доступ пользователя к доске
+// RemoveShare removes board access from user
+// @Summary Remove share
+// @Description Remove board access from user (owner only)
+// @Tags board-sharing
+// @Produce json
+// @Param id path string true "Board ID"
+// @Param user_id path string true "User ID to remove access"
+// @Success 200 {object} object{message=string}
+// @Failure 400 {object} object "Invalid ID format"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Not board owner"
+// @Failure 404 {object} object "Board not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security ApiKeyAuth
+// @Router /boards/{id}/share/{user_id} [delete]
 func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
 	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -186,7 +217,20 @@ func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Board access removed successfully"})
 }
 
-// GetBoardShares возвращает список пользователей с доступом к доске
+// GetBoardShares gets list of users with board access
+// @Summary Get board shares
+// @Description Get list of users with access to board (owner or at least viewer)
+// @Tags board-sharing
+// @Produce json
+// @Param id path string true "Board ID"
+// @Success 200 {array} BoardShareResponse
+// @Failure 400 {object} object "Invalid board ID"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "No access rights"
+// @Failure 404 {object} object "Board not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security ApiKeyAuth
+// @Router /boards/{id}/share [get]
 func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -268,7 +312,16 @@ func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetSharedBoards возвращает список досок, к которым у пользователя есть доступ
+// GetSharedBoards gets boards shared with current user
+// @Summary Get shared boards
+// @Description Get list of boards shared with current user
+// @Tags board-sharing
+// @Produce json
+// @Success 200 {array} BoardResponse
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 500 {object} object "Internal server error"
+// @Security ApiKeyAuth
+// @Router /me/shared-boards [get]
 func (h *BoardShareHandler) GetSharedBoards(c *gin.Context) {
 	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
