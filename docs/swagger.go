@@ -40,7 +40,11 @@ import "github.com/swaggo/swag"
 // @tag.name Board Sharing
 // @tag.description Board sharing operations
 
-// Register swagger info
-func SwaggerInfo() *swag.Spec {
-	return swag.Instance
+var SwaggerInfo = &swag.Spec{
+    Version:     "1.0",
+    Host:        "localhost:8080",
+    BasePath:    "/",
+    Schemes:     []string{"http"},
+    Title:       "Kanban Board API",
+    Description: "API for managing Kanban boards, columns, tasks, and user collaboration",
 }

@@ -10,17 +10,16 @@ import (
 	"syscall"
 	"time"
 
-	"kanban/internal/config"
-	"kanban/docs"
-	"kanban/internal/handler"
-	"kanban/internal/middleware"
-	"kanban/internal/repository"
-
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"kanban/internal/config"
+	"kanban/internal/handler"
+	"kanban/internal/middleware"
+	"kanban/internal/repository"
 )
 
 type Server struct {
