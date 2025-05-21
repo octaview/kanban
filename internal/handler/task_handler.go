@@ -67,6 +67,21 @@ type TaskResponse struct {
 	Labels       []LabelResponse `json:"labels,omitempty"`
 }
 
+// Create godoc
+// @Summary Create a new task
+// @Description Creates a new task with the given details
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param task body TaskRequest true "Task information"
+// @Success 201 {object} TaskResponse "Task created successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Column not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks [post]
 func (h *TaskHandler) Create(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -170,6 +185,21 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// GetByID godoc
+// @Summary Get task by ID
+// @Description Retrieves a task by its ID
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Success 200 {object} TaskResponse "Task details"
+// @Failure 400 {object} map[string]string "Invalid task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id} [get]
 func (h *TaskHandler) GetByID(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -256,6 +286,21 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetByColumnID godoc
+// @Summary Get tasks by column ID
+// @Description Retrieves all tasks for a specific column
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Column ID" format(uuid)
+// @Success 200 {array} TaskResponse "List of tasks in the column"
+// @Failure 400 {object} map[string]string "Invalid column ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Column not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /columns/{id}/tasks [get]
 func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -370,6 +415,22 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// Update godoc
+// @Summary Update a task
+// @Description Updates an existing task with new details
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Param task body TaskRequest true "Updated task information"
+// @Success 200 {object} TaskResponse "Task updated successfully"
+// @Failure 400 {object} map[string]string "Invalid request or task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task or column not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id} [put]
 func (h *TaskHandler) Update(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -496,6 +557,21 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// Delete godoc
+// @Summary Delete a task
+// @Description Deletes a task by its ID
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Success 200 {object} map[string]string "Task deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id} [delete]
 func (h *TaskHandler) Delete(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -557,6 +633,22 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
 }
 
+// MoveTask godoc
+// @Summary Move a task
+// @Description Moves a task to a different column and/or position
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Param move body TaskMoveRequest true "Task move information"
+// @Success 200 {object} map[string]string "Task moved successfully"
+// @Failure 400 {object} map[string]string "Invalid request or task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task or column not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id}/move [post]
 func (h *TaskHandler) MoveTask(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -648,6 +740,22 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task moved successfully"})
 }
 
+// AssignUser godoc
+// @Summary Assign user to task
+// @Description Assigns a user to a specific task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Param assignment body TaskAssignRequest true "User assignment information"
+// @Success 200 {object} map[string]string "User assigned to task successfully"
+// @Failure 400 {object} map[string]string "Invalid request or task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task or user not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id}/assign [post]
 func (h *TaskHandler) AssignUser(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -732,6 +840,21 @@ func (h *TaskHandler) AssignUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User assigned to task successfully"})
 }
 
+// UnassignUser godoc
+// @Summary Unassign user from task
+// @Description Removes the assigned user from a task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Success 200 {object} map[string]string "User unassigned from task successfully"
+// @Failure 400 {object} map[string]string "Invalid task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id}/assign [delete]
 func (h *TaskHandler) UnassignUser(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -793,6 +916,22 @@ func (h *TaskHandler) UnassignUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User unassigned from task successfully"})
 }
 
+// AddLabel godoc
+// @Summary Add label to task
+// @Description Adds a label to a specific task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Param label_id path string true "Label ID" format(uuid)
+// @Success 200 {object} map[string]string "Label added to task successfully"
+// @Failure 400 {object} map[string]string "Invalid task or label ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id}/labels/{label_id} [post]
 func (h *TaskHandler) AddLabel(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -861,6 +1000,22 @@ func (h *TaskHandler) AddLabel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Label added to task successfully"})
 }
 
+// RemoveLabel godoc
+// @Summary Remove label from task
+// @Description Removes a label from a specific task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Param label_id path string true "Label ID" format(uuid)
+// @Success 200 {object} map[string]string "Label removed from task successfully"
+// @Failure 400 {object} map[string]string "Invalid task or label ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id}/labels/{label_id} [delete]
 func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -929,6 +1084,21 @@ func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Label removed from task successfully"})
 }
 
+// GetTaskLabels godoc
+// @Summary Get task labels
+// @Description Retrieves all labels associated with a specific task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Success 200 {array} LabelResponse "List of labels associated with the task"
+// @Failure 400 {object} map[string]string "Invalid task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id}/labels [get]
 func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
@@ -1005,6 +1175,22 @@ func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 	c.JSON(http.StatusOK, labels)
 }
 
+// SetDueDate godoc
+// @Summary Set task due date
+// @Description Sets or updates the due date for a task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID" format(uuid)
+// @Param due_date body struct{DueDate *time.Time `json:"due_date"`} true "Due date information"
+// @Success 200 {object} TaskResponse "Due date updated successfully"
+// @Failure 400 {object} map[string]string "Invalid request or task ID format"
+// @Failure 401 {object} map[string]string "Not authenticated"
+// @Failure 403 {object} map[string]string "Permission denied"
+// @Failure 404 {object} map[string]string "Task not found"
+// @Failure 500 {object} map[string]string "Server error"
+// @Security BearerAuth
+// @Router /tasks/{id}/due-date [post]
 func (h *TaskHandler) SetDueDate(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
