@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"kanban/internal/config"
-	"kanban/internal/docs"
+	"kanban/docs"
 	"kanban/internal/handler"
 	"kanban/internal/middleware"
 	"kanban/internal/repository"
