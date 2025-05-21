@@ -243,14 +243,10 @@ definitions:
 host: localhost:8080
 info:
   contact:
-    email: you@example.com
-    name: Your Name
-    url: http://your-website.com
+    email: octaviewes@gmail.com
+    name: octaview
+    url: t.me/octaview
   description: API for managing Kanban boards.
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-  termsOfService: http://example.com/terms/
   title: Kanban API
   version: "1.0"
 paths:
@@ -481,6 +477,8 @@ paths:
           description: Server error
           schema:
             type: object
+      security:
+      - BearerAuth: []
       summary: Get all columns for a board
       tags:
       - Columns
@@ -529,6 +527,8 @@ paths:
           description: Server error
           schema:
             type: object
+      security:
+      - BearerAuth: []
       summary: Reorder board columns
       tags:
       - Columns
@@ -760,6 +760,8 @@ paths:
           description: Server error
           schema:
             type: object
+      security:
+      - BearerAuth: []
       summary: Create a new column
       tags:
       - Columns
@@ -806,6 +808,8 @@ paths:
           description: Server error
           schema:
             type: object
+      security:
+      - BearerAuth: []
       summary: Delete a column
       tags:
       - Columns
@@ -851,6 +855,8 @@ paths:
           description: Server error
           schema:
             type: object
+      security:
+      - BearerAuth: []
       summary: Get column by ID
       tags:
       - Columns
@@ -902,6 +908,8 @@ paths:
           description: Server error
           schema:
             type: object
+      security:
+      - BearerAuth: []
       summary: Update a column
       tags:
       - Columns

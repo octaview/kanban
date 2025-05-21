@@ -9,15 +9,10 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://example.com/terms/",
         "contact": {
-            "name": "Your Name",
-            "url": "http://your-website.com",
-            "email": "you@example.com"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
+            "name": "octaview",
+            "url": "t.me/octaview",
+            "email": "octaviewes@gmail.com"
         },
         "version": "{{.Version}}"
     },
@@ -313,6 +308,11 @@ const docTemplate = `{
         },
         "/boards/{id}/columns": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves all columns for the specified board, sorted by position",
                 "consumes": [
                     "application/json"
@@ -379,6 +379,11 @@ const docTemplate = `{
         },
         "/boards/{id}/columns/reorder": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Changes the order of columns on a board",
                 "consumes": [
                     "application/json"
@@ -743,6 +748,11 @@ const docTemplate = `{
         },
         "/columns": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Creates a new column on a board",
                 "consumes": [
                     "application/json"
@@ -808,6 +818,11 @@ const docTemplate = `{
         },
         "/columns/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves a column by its ID",
                 "consumes": [
                     "application/json"
@@ -875,6 +890,11 @@ const docTemplate = `{
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Updates a column's details",
                 "consumes": [
                     "application/json"
@@ -951,6 +971,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Deletes a column by its ID",
                 "consumes": [
                     "application/json"

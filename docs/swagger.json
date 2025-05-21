@@ -6,15 +6,10 @@
     "info": {
         "description": "API for managing Kanban boards.",
         "title": "Kanban API",
-        "termsOfService": "http://example.com/terms/",
         "contact": {
-            "name": "Your Name",
-            "url": "http://your-website.com",
-            "email": "you@example.com"
-        },
-        "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
+            "name": "octaview",
+            "url": "t.me/octaview",
+            "email": "octaviewes@gmail.com"
         },
         "version": "1.0"
     },
@@ -310,6 +305,11 @@
         },
         "/boards/{id}/columns": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves all columns for the specified board, sorted by position",
                 "consumes": [
                     "application/json"
@@ -376,6 +376,11 @@
         },
         "/boards/{id}/columns/reorder": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Changes the order of columns on a board",
                 "consumes": [
                     "application/json"
@@ -740,6 +745,11 @@
         },
         "/columns": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Creates a new column on a board",
                 "consumes": [
                     "application/json"
@@ -805,6 +815,11 @@
         },
         "/columns/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves a column by its ID",
                 "consumes": [
                     "application/json"
@@ -872,6 +887,11 @@
                 }
             },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Updates a column's details",
                 "consumes": [
                     "application/json"
@@ -948,6 +968,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Deletes a column by its ID",
                 "consumes": [
                     "application/json"

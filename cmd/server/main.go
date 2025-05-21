@@ -11,14 +11,11 @@ import (
 // @title           Kanban API
 // @version         1.0
 // @description     API for managing Kanban boards.
-// @termsOfService  http://example.com/terms/
 
-// @contact.name   Your Name
-// @contact.url    http://your-website.com
-// @contact.email  you@example.com
+// @contact.name   octaview
+// @contact.url    t.me/octaview
+// @contact.email  octaviewes@gmail.com
 
-// @license.name  MIT
-// @license.url   https://opensource.org/licenses/MIT
 
 // @host      localhost:8080
 // @BasePath  /
