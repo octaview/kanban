@@ -1,0 +1,1945 @@
+basePath: /
+definitions:
+  handler.AuthResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/handler.UserDetails'
+    type: object
+  handler.BoardResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      owner_id:
+        type: string
+      title:
+        type: string
+    type: object
+  handler.BoardShareResponse:
+    properties:
+      email:
+        type: string
+      is_owner:
+        type: boolean
+      name:
+        type: string
+      role:
+        type: string
+      user_id:
+        type: string
+    type: object
+  handler.ColumnResponse:
+    properties:
+      board_id:
+        type: string
+      id:
+        type: string
+      position:
+        type: integer
+      title:
+        type: string
+    type: object
+  handler.CreateBoardRequest:
+    properties:
+      description:
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
+  handler.CreateColumnRequest:
+    properties:
+      board_id:
+        type: string
+      position:
+        type: integer
+      title:
+        type: string
+    required:
+    - board_id
+    - title
+    type: object
+  handler.CreateLabelRequest:
+    properties:
+      board_id:
+        type: string
+      color:
+        type: string
+      name:
+        type: string
+    required:
+    - board_id
+    - color
+    - name
+    type: object
+  handler.LabelResponse:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  handler.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  handler.ReorderColumnsRequest:
+    properties:
+      columns:
+        items:
+          properties:
+            id:
+              type: string
+            position:
+              type: integer
+          required:
+          - id
+          - position
+          type: object
+        type: array
+    required:
+    - columns
+    type: object
+  handler.SetDueDateRequest:
+    properties:
+      due_date:
+        type: string
+    type: object
+  handler.ShareBoardRequest:
+    properties:
+      email:
+        type: string
+      role:
+        enum:
+        - viewer
+        - editor
+        type: string
+    required:
+    - email
+    - role
+    type: object
+  handler.TaskAssignRequest:
+    properties:
+      user_id:
+        type: string
+    required:
+    - user_id
+    type: object
+  handler.TaskMoveRequest:
+    properties:
+      column_id:
+        type: string
+      position:
+        minimum: 0
+        type: integer
+    required:
+    - column_id
+    - position
+    type: object
+  handler.TaskRequest:
+    properties:
+      column_id:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      position:
+        type: integer
+      title:
+        type: string
+    required:
+    - column_id
+    - title
+    type: object
+  handler.TaskResponse:
+    properties:
+      assigned_to:
+        type: string
+      assignee_name:
+        type: string
+      column_id:
+        type: string
+      created_by:
+        type: string
+      creator_name:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      labels:
+        items:
+          $ref: '#/definitions/handler.LabelResponse'
+        type: array
+      position:
+        type: integer
+      title:
+        type: string
+    type: object
+  handler.UpdateBoardRequest:
+    properties:
+      description:
+        type: string
+      title:
+        type: string
+    type: object
+  handler.UpdateColumnRequest:
+    properties:
+      position:
+        type: integer
+      title:
+        type: string
+    type: object
+  handler.UpdateLabelRequest:
+    properties:
+      color:
+        type: string
+      name:
+        type: string
+    required:
+    - color
+    - name
+    type: object
+  handler.UserDetails:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: you@example.com
+    name: Your Name
+    url: http://your-website.com
+  description: API for managing Kanban boards.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://example.com/terms/
+  title: Kanban API
+  version: "1.0"
+paths:
+  /boards:
+    get:
+      description: Get all boards that the authenticated user owns or has access to
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of boards
+          schema:
+            items:
+              $ref: '#/definitions/handler.BoardResponse'
+            type: array
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all accessible boards
+      tags:
+      - Boards
+    post:
+      consumes:
+      - application/json
+      description: Create a new Kanban board for the authenticated user
+      parameters:
+      - description: Board creation details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateBoardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Board created successfully
+          schema:
+            $ref: '#/definitions/handler.BoardResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Maximum number of boards reached
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new board
+      tags:
+      - Boards
+  /boards/{id}:
+    get:
+      description: Get a specific board by its ID if the authenticated user has access
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Board details
+          schema:
+            $ref: '#/definitions/handler.BoardResponse'
+        "400":
+          description: Invalid board ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Board not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a board by ID
+      tags:
+      - Boards
+    put:
+      consumes:
+      - application/json
+      description: Update a board's title and/or description if the authenticated
+        user has permission
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Board update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateBoardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated board details
+          schema:
+            $ref: '#/definitions/handler.BoardResponse'
+        "400":
+          description: Invalid request or board ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Board not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a board
+      tags:
+      - Boards
+  /boards/{id}/columns:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all columns for the specified board, sorted by position
+      parameters:
+      - description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Board columns
+          schema:
+            items:
+              $ref: '#/definitions/handler.ColumnResponse'
+            type: array
+        "400":
+          description: Invalid board ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "500":
+          description: Server error
+          schema:
+            type: object
+      summary: Get all columns for a board
+      tags:
+      - Columns
+  /boards/{id}/columns/reorder:
+    post:
+      consumes:
+      - application/json
+      description: Changes the order of columns on a board
+      parameters:
+      - description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Column reordering data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ReorderColumnsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            type: object
+        "400":
+          description: Invalid request data
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "500":
+          description: Server error
+          schema:
+            type: object
+      summary: Reorder board columns
+      tags:
+      - Columns
+  /boards/{id}/labels:
+    get:
+      description: Get all labels for a specific board
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.LabelResponse'
+            type: array
+        "400":
+          description: Invalid board ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Board not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get board labels
+      tags:
+      - Labels
+  /boards/{id}/share:
+    get:
+      description: Get list of users with access to board (owner or at least viewer)
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.BoardShareResponse'
+            type: array
+        "400":
+          description: Invalid board ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: No access rights
+          schema:
+            type: object
+        "404":
+          description: Board not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get board shares
+      tags:
+      - board-sharing
+    post:
+      consumes:
+      - application/json
+      description: Share board access with another user by email (owner only)
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Share data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.ShareBoardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+              share:
+                $ref: '#/definitions/handler.BoardShareResponse'
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Not board owner
+          schema:
+            type: object
+        "404":
+          description: Board or user not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Share board
+      tags:
+      - board-sharing
+  /boards/{id}/share/{user_id}:
+    delete:
+      description: Remove board access from user (owner only)
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID to remove access
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: Invalid ID format
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Not board owner
+          schema:
+            type: object
+        "404":
+          description: Board not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Remove share
+      tags:
+      - board-sharing
+  /columns:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new column on a board
+      parameters:
+      - description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Column creation data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateColumnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created column
+          schema:
+            $ref: '#/definitions/handler.ColumnResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "500":
+          description: Server error
+          schema:
+            type: object
+      summary: Create a new column
+      tags:
+      - Columns
+  /columns/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a column by its ID
+      parameters:
+      - description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Column ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            type: object
+        "400":
+          description: Invalid column ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Column not found
+          schema:
+            type: object
+        "500":
+          description: Server error
+          schema:
+            type: object
+      summary: Delete a column
+      tags:
+      - Columns
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a column by its ID
+      parameters:
+      - description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Column ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Column data
+          schema:
+            $ref: '#/definitions/handler.ColumnResponse'
+        "400":
+          description: Invalid column ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Column not found
+          schema:
+            type: object
+        "500":
+          description: Server error
+          schema:
+            type: object
+      summary: Get column by ID
+      tags:
+      - Columns
+    put:
+      consumes:
+      - application/json
+      description: Updates a column's details
+      parameters:
+      - description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Column ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Column update data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateColumnRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated column
+          schema:
+            $ref: '#/definitions/handler.ColumnResponse'
+        "400":
+          description: Invalid request data
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Column not found
+          schema:
+            type: object
+        "500":
+          description: Server error
+          schema:
+            type: object
+      summary: Update a column
+      tags:
+      - Columns
+  /columns/{id}/tasks:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all tasks for a specific column
+      parameters:
+      - description: Column ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tasks in the column
+          schema:
+            items:
+              $ref: '#/definitions/handler.TaskResponse'
+            type: array
+        "400":
+          description: Invalid column ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Column not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get tasks by column ID
+      tags:
+      - Tasks
+  /labels:
+    post:
+      consumes:
+      - application/json
+      description: Create a new label for a board
+      parameters:
+      - description: Label data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateLabelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.LabelResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Board not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create label
+      tags:
+      - Labels
+  /labels/{id}:
+    delete:
+      description: Delete an existing label
+      parameters:
+      - description: Label ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              message:
+                type: string
+            type: object
+        "400":
+          description: Invalid label ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Label not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete label
+      tags:
+      - Labels
+    get:
+      description: Get a specific label by its ID
+      parameters:
+      - description: Label ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LabelResponse'
+        "400":
+          description: Invalid label ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Label not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get label by ID
+      tags:
+      - Labels
+    put:
+      consumes:
+      - application/json
+      description: Update an existing label
+      parameters:
+      - description: Label ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated label data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateLabelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.LabelResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Label not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update label
+      tags:
+      - Labels
+  /labels/{id}/tasks:
+    get:
+      description: Get all tasks that have a specific label
+      parameters:
+      - description: Label ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              properties:
+                column_id:
+                  type: string
+                description:
+                  type: string
+                id:
+                  type: string
+                title:
+                  type: string
+              type: object
+            type: array
+        "400":
+          description: Invalid label ID
+          schema:
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "403":
+          description: Insufficient permissions
+          schema:
+            type: object
+        "404":
+          description: Label not found
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get tasks with label
+      tags:
+      - Labels
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Log in with email and password to receive an authentication token
+      parameters:
+      - description: User login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful with auth token
+          schema:
+            $ref: '#/definitions/handler.AuthResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Authenticate a user
+      tags:
+      - Users
+  /me/shared-boards:
+    get:
+      description: Get list of boards shared with current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.BoardResponse'
+            type: array
+        "401":
+          description: Not authenticated
+          schema:
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Get shared boards
+      tags:
+      - board-sharing
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account and return authentication token
+      parameters:
+      - description: User registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully with auth token
+          schema:
+            $ref: '#/definitions/handler.AuthResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: User with this email already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - Users
+  /tasks:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new task with the given details
+      parameters:
+      - description: Task information
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Task created successfully
+          schema:
+            $ref: '#/definitions/handler.TaskResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Column not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new task
+      tags:
+      - Tasks
+  /tasks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a task by its ID
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a task
+      tags:
+      - Tasks
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a task by its ID
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task details
+          schema:
+            $ref: '#/definitions/handler.TaskResponse'
+        "400":
+          description: Invalid task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get task by ID
+      tags:
+      - Tasks
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing task with new details
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated task information
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task updated successfully
+          schema:
+            $ref: '#/definitions/handler.TaskResponse'
+        "400":
+          description: Invalid request or task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task or column not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a task
+      tags:
+      - Tasks
+  /tasks/{id}/assign:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the assigned user from a task
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User unassigned from task successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Unassign user from task
+      tags:
+      - Tasks
+    post:
+      consumes:
+      - application/json
+      description: Assigns a user to a specific task
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User assignment information
+        in: body
+        name: assignment
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TaskAssignRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User assigned to task successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task or user not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign user to task
+      tags:
+      - Tasks
+  /tasks/{id}/due-date:
+    post:
+      consumes:
+      - application/json
+      description: Sets or updates the due date for a task
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Due date information
+        in: body
+        name: due_date
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SetDueDateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Due date updated successfully
+          schema:
+            $ref: '#/definitions/handler.TaskResponse'
+        "400":
+          description: Invalid request or task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set task due date
+      tags:
+      - Tasks
+  /tasks/{id}/labels:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all labels associated with a specific task
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of labels associated with the task
+          schema:
+            items:
+              $ref: '#/definitions/handler.LabelResponse'
+            type: array
+        "400":
+          description: Invalid task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get task labels
+      tags:
+      - Tasks
+  /tasks/{id}/labels/{label_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a label from a specific task
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Label ID
+        format: uuid
+        in: path
+        name: label_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Label removed from task successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid task or label ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove label from task
+      tags:
+      - Tasks
+    post:
+      consumes:
+      - application/json
+      description: Adds a label to a specific task
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Label ID
+        format: uuid
+        in: path
+        name: label_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Label added to task successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid task or label ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add label to task
+      tags:
+      - Tasks
+  /tasks/{id}/move:
+    post:
+      consumes:
+      - application/json
+      description: Moves a task to a different column and/or position
+      parameters:
+      - description: Task ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task move information
+        in: body
+        name: move
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TaskMoveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task moved successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or task ID format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Not authenticated
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Task or column not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Move a task
+      tags:
+      - Tasks
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

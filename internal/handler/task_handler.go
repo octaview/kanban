@@ -36,6 +36,15 @@ func NewTaskHandler(
 	}
 }
 
+// SetDueDateRequest represents the request body for setting a due date
+// @name SetDueDateRequest
+type SetDueDateRequest struct {
+    DueDate *time.Time `json:"due_date"`
+}
+
+
+// TaskRequest represents the request body for creating or updating a task
+// @name TaskRequest
 type TaskRequest struct {
 	Title       string     `json:"title" binding:"required"`
 	Description string     `json:"description"`
@@ -44,15 +53,22 @@ type TaskRequest struct {
 	Position    *int       `json:"position"`
 }
 
+
+// TaskMoveRequest represents the request body for moving a task
+// @name TaskMoveRequest
 type TaskMoveRequest struct {
 	ColumnID string `json:"column_id" binding:"required,uuid"`
 	Position int    `json:"position" binding:"required,min=0"`
 }
 
+// TaskAssignRequest represents the request body for assigning a user to a task
+// @name TaskAssignRequest
 type TaskAssignRequest struct {
 	UserID string `json:"user_id" binding:"required,uuid"`
 }
 
+// LabelResponse represents the response for a label
+// @name LabelResponse
 type TaskResponse struct {
 	ID           string          `json:"id"`
 	Title        string          `json:"title"`
@@ -1182,7 +1198,7 @@ func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Task ID" format(uuid)
-// @Param due_date body struct{DueDate *time.Time `json:"due_date"`} true "Due date information"
+// @Param due_date body SetDueDateRequest true "Due date information"
 // @Success 200 {object} TaskResponse "Due date updated successfully"
 // @Failure 400 {object} map[string]string "Invalid request or task ID format"
 // @Failure 401 {object} map[string]string "Not authenticated"

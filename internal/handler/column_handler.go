@@ -88,6 +88,7 @@ func (h *ColumnHandler) checkBoardAccess(c *gin.Context, boardID uuid.UUID, user
 // @Failure 401 {object} object "Not authenticated"
 // @Failure 403 {object} object "Insufficient permissions"
 // @Failure 500 {object} object "Server error"
+// @Security BearerAuth
 // @Router /columns [post]
 func (h *ColumnHandler) Create(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -167,6 +168,7 @@ func (h *ColumnHandler) Create(c *gin.Context) {
 // @Failure 401 {object} object "Not authenticated"
 // @Failure 403 {object} object "Insufficient permissions"
 // @Failure 500 {object} object "Server error"
+// @Security BearerAuth
 // @Router /boards/{id}/columns [get]
 func (h *ColumnHandler) GetAll(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -232,6 +234,7 @@ func (h *ColumnHandler) GetAll(c *gin.Context) {
 // @Failure 403 {object} object "Insufficient permissions"
 // @Failure 404 {object} object "Column not found" 
 // @Failure 500 {object} object "Server error"
+// @Security BearerAuth
 // @Router /columns/{id} [get]
 func (h *ColumnHandler) GetByID(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -298,6 +301,7 @@ func (h *ColumnHandler) GetByID(c *gin.Context) {
 // @Failure 403 {object} object "Insufficient permissions"
 // @Failure 404 {object} object "Column not found"
 // @Failure 500 {object} object "Server error"
+// @Security BearerAuth
 // @Router /columns/{id} [put]
 func (h *ColumnHandler) Update(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -381,6 +385,7 @@ func (h *ColumnHandler) Update(c *gin.Context) {
 // @Failure 403 {object} object "Insufficient permissions"
 // @Failure 404 {object} object "Column not found"
 // @Failure 500 {object} object "Server error"
+// @Security BearerAuth
 // @Router /columns/{id} [delete]
 func (h *ColumnHandler) Delete(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
@@ -446,6 +451,7 @@ func (h *ColumnHandler) Delete(c *gin.Context) {
 // @Failure 401 {object} object "Not authenticated"
 // @Failure 403 {object} object "Insufficient permissions"
 // @Failure 500 {object} object "Server error"
+// @Security BearerAuth
 // @Router /boards/{id}/columns/reorder [post]
 func (h *ColumnHandler) ReorderColumns(c *gin.Context) {
 	userID, exists := c.Get(middleware.UserIDKey)
