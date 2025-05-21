@@ -36,7 +36,6 @@ func NewTaskHandler(
 	}
 }
 
-// TaskRequest представляет запрос на создание или обновление задачи
 type TaskRequest struct {
 	Title       string     `json:"title" binding:"required"`
 	Description string     `json:"description"`
@@ -45,18 +44,15 @@ type TaskRequest struct {
 	Position    *int       `json:"position"`
 }
 
-// TaskMoveRequest представляет запрос на перемещение задачи
 type TaskMoveRequest struct {
 	ColumnID string `json:"column_id" binding:"required,uuid"`
 	Position int    `json:"position" binding:"required,min=0"`
 }
 
-// TaskAssignRequest представляет запрос на назначение пользователя на задачу
 type TaskAssignRequest struct {
 	UserID string `json:"user_id" binding:"required,uuid"`
 }
 
-// TaskResponse представляет ответ с данными задачи
 type TaskResponse struct {
 	ID           string          `json:"id"`
 	Title        string          `json:"title"`
@@ -71,16 +67,7 @@ type TaskResponse struct {
 	Labels       []LabelResponse `json:"labels,omitempty"`
 }
 
-// LabelResponse представляет ответ с данными метки
-type LabelResponse struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Color string `json:"color"`
-}
-
-// Create создает новую задачу
 func (h *TaskHandler) Create(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -93,14 +80,12 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Парсим запрос
 	var req TaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Проверяем существование колонки
 	columnID, err := uuid.Parse(req.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid column ID format"})
@@ -118,14 +103,12 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -137,12 +120,10 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Определяем позицию для новой задачи
 	position := 0
 	if req.Position != nil {
 		position = *req.Position
 	} else {
-		// Если позиция не указана, добавляем в конец колонки
 		tasks, err := h.taskRepo.GetByColumnID(c.Request.Context(), columnID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
@@ -151,7 +132,6 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		position = len(tasks)
 	}
 
-	// Создаем новую задачу
 	task := &model.Task{
 		ColumnID:    columnID,
 		Title:       req.Title,
@@ -161,20 +141,17 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		Position:    position,
 	}
 
-	// Сохраняем задачу в БД
 	if err := h.taskRepo.Create(c.Request.Context(), task); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
 	}
 
-	// Находим информацию о создателе
 	creator, err := h.userRepo.GetByID(c.Request.Context(), authenticatedUserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user information"})
 		return
 	}
 
-	// Формируем ответ
 	response := TaskResponse{
 		ID:          task.ID.String(),
 		Title:       task.Title,
@@ -193,9 +170,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// GetByID получает задачу по ID
 func (h *TaskHandler) GetByID(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -208,7 +183,6 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -216,7 +190,6 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -227,21 +200,18 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleViewer)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -253,14 +223,12 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Получаем информацию о создателе
 	creator, err := h.userRepo.GetByID(c.Request.Context(), task.CreatedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve creator information"})
 		return
 	}
 
-	// Формируем ответ
 	response := TaskResponse{
 		ID:          task.ID.String(),
 		Title:       task.Title,
@@ -276,7 +244,6 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		response.DueDate = &dueDate
 	}
 
-	// Добавляем информацию о назначенном пользователе, если есть
 	if task.AssignedTo != nil {
 		assignee, err := h.userRepo.GetByID(c.Request.Context(), *task.AssignedTo)
 		if err == nil {
@@ -289,9 +256,7 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetByColumnID получает все задачи в колонке
 func (h *TaskHandler) GetByColumnID(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -304,7 +269,6 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID колонки из URL
 	columnIDStr := c.Param("id")
 	columnID, err := uuid.Parse(columnIDStr)
 	if err != nil {
@@ -312,7 +276,6 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку
 	column, err := h.columnRepo.GetByID(c.Request.Context(), columnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
@@ -324,14 +287,12 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleViewer)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -343,20 +304,16 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачи с метками
 	tasks, err := h.taskRepo.GetTasksWithLabels(c.Request.Context(), columnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
 		return
 	}
 
-	// Создаем кэш пользователей для оптимизации
 	userCache := make(map[uuid.UUID]*model.User)
 
-	// Формируем ответ
 	response := make([]TaskResponse, len(tasks))
 	for i, task := range tasks {
-		// Получаем информацию о создателе
 		var creator *model.User
 		var ok bool
 		if creator, ok = userCache[task.CreatedBy]; !ok {
@@ -366,7 +323,6 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 			}
 		}
 
-		// Добавляем задачу в ответ
 		response[i] = TaskResponse{
 			ID:          task.ID.String(),
 			Title:       task.Title,
@@ -382,7 +338,6 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 			response[i].DueDate = &dueDate
 		}
 
-		// Добавляем информацию о назначенном пользователе, если есть
 		if task.AssignedTo != nil {
 			var assignee *model.User
 			if assignee, ok = userCache[*task.AssignedTo]; !ok {
@@ -399,7 +354,6 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 			}
 		}
 
-		// Добавляем метки задачи
 		if len(task.Labels) > 0 {
 			labels := make([]LabelResponse, len(task.Labels))
 			for j, label := range task.Labels {
@@ -416,9 +370,7 @@ func (h *TaskHandler) GetByColumnID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Update обновляет задачу
 func (h *TaskHandler) Update(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -431,7 +383,6 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -439,7 +390,6 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -450,21 +400,18 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -476,14 +423,12 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Парсим запрос
 	var req TaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Проверяем, меняется ли колонка
 	var newColumnID uuid.UUID
 	var columnChanged bool
 	if req.ColumnID != task.ColumnID.String() {
@@ -494,7 +439,6 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			return
 		}
 
-		// Проверяем существование новой колонки
 		newColumn, err := h.columnRepo.GetByID(c.Request.Context(), newColumnID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
@@ -506,7 +450,6 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			return
 		}
 
-		// Проверяем, что новая колонка принадлежит той же доске
 		if newColumn.BoardID != column.BoardID {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot move task to a column from another board"})
 			return
@@ -515,32 +458,27 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		newColumnID = task.ColumnID
 	}
 
-	// Обновляем задачу
 	task.Title = req.Title
 	task.Description = req.Description
 	task.DueDate = req.DueDate
 
-	// Если колонка изменилась или изменилась позиция
 	if columnChanged || (req.Position != nil && *req.Position != task.Position) {
 		position := task.Position
 		if req.Position != nil {
 			position = *req.Position
 		}
 
-		// Используем MoveTask для правильного обновления позиций
 		if err := h.taskRepo.MoveTask(c.Request.Context(), taskID, newColumnID, position); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to move task"})
 			return
 		}
 	} else {
-		// Обычное обновление без изменения позиции
 		if err := h.taskRepo.Update(c.Request.Context(), task); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 			return
 		}
 	}
 
-	// Формируем ответ
 	response := TaskResponse{
 		ID:          task.ID.String(),
 		Title:       task.Title,
@@ -558,9 +496,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Delete удаляет задачу
 func (h *TaskHandler) Delete(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -573,7 +509,6 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -581,7 +516,6 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -592,34 +526,29 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
 		return
 	}
 
-	// Разрешаем удаление только владельцу доски, создателю задачи или редакторам
 	if !hasAccess && board.OwnerID != authenticatedUserID && task.CreatedBy != authenticatedUserID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this task"})
 		return
 	}
 
-	// Удаляем задачу
 	if err := h.taskRepo.Delete(c.Request.Context(), taskID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
 		return
@@ -628,9 +557,7 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
 }
 
-// MoveTask перемещает задачу между колонками или изменяет её позицию
 func (h *TaskHandler) MoveTask(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -643,7 +570,6 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -651,7 +577,6 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -662,21 +587,18 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -688,21 +610,18 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 		return
 	}
 
-	// Парсим запрос
 	var req TaskMoveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Парсим ID целевой колонки
 	targetColumnID, err := uuid.Parse(req.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid column ID format"})
 		return
 	}
 
-	// Если целевая колонка отличается от текущей, проверяем её существование
 	if targetColumnID != task.ColumnID {
 		targetColumn, err := h.columnRepo.GetByID(c.Request.Context(), targetColumnID)
 		if err != nil {
@@ -715,14 +634,12 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 			return
 		}
 
-		// Проверяем, что целевая колонка принадлежит той же доске
 		if targetColumn.BoardID != column.BoardID {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot move task to a column from another board"})
 			return
 		}
 	}
 
-	// Перемещаем задачу
 	if err := h.taskRepo.MoveTask(c.Request.Context(), taskID, targetColumnID, req.Position); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to move task"})
 		return
@@ -731,9 +648,7 @@ func (h *TaskHandler) MoveTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task moved successfully"})
 }
 
-// AssignUser назначает пользователя на задачу
 func (h *TaskHandler) AssignUser(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -746,7 +661,6 @@ func (h *TaskHandler) AssignUser(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -754,7 +668,6 @@ func (h *TaskHandler) AssignUser(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -765,21 +678,18 @@ func (h *TaskHandler) AssignUser(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -791,21 +701,18 @@ func (h *TaskHandler) AssignUser(c *gin.Context) {
 		return
 	}
 
-	// Парсим запрос
 	var req TaskAssignRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Парсим ID пользователя
 	assigneeID, err := uuid.Parse(req.UserID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
 		return
 	}
 
-	// Проверяем существование пользователя
 	assignee, err := h.userRepo.GetByID(c.Request.Context(), assigneeID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
@@ -817,7 +724,6 @@ func (h *TaskHandler) AssignUser(c *gin.Context) {
 		return
 	}
 
-	// Назначаем пользователя на задачу
 	if err := h.taskRepo.AssignUser(c.Request.Context(), taskID, assigneeID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign user to task"})
 		return
@@ -826,9 +732,7 @@ func (h *TaskHandler) AssignUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User assigned to task successfully"})
 }
 
-// UnassignUser удаляет назначение пользователя с задачи
 func (h *TaskHandler) UnassignUser(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -841,7 +745,6 @@ func (h *TaskHandler) UnassignUser(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -849,7 +752,6 @@ func (h *TaskHandler) UnassignUser(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -860,21 +762,18 @@ func (h *TaskHandler) UnassignUser(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права доступа
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -886,7 +785,6 @@ func (h *TaskHandler) UnassignUser(c *gin.Context) {
 		return
 	}
 
-	// Удаляем назначение пользователя
 	if err := h.taskRepo.UnassignUser(c.Request.Context(), taskID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unassign user from task"})
 		return
@@ -895,9 +793,7 @@ func (h *TaskHandler) UnassignUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User unassigned from task successfully"})
 }
 
-// AddLabel добавляет метку к задаче
 func (h *TaskHandler) AddLabel(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -910,7 +806,6 @@ func (h *TaskHandler) AddLabel(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -918,7 +813,6 @@ func (h *TaskHandler) AddLabel(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID метки из URL
 	labelIDStr := c.Param("label_id")
 	labelID, err := uuid.Parse(labelIDStr)
 	if err != nil {
@@ -926,7 +820,6 @@ func (h *TaskHandler) AddLabel(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -937,21 +830,18 @@ func (h *TaskHandler) AddLabel(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права владельца
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -963,7 +853,6 @@ func (h *TaskHandler) AddLabel(c *gin.Context) {
 		return
 	}
 
-	// Добавляем метку к задаче
 	if err := h.taskRepo.AddLabel(c.Request.Context(), taskID, labelID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add label to task"})
 		return
@@ -972,9 +861,7 @@ func (h *TaskHandler) AddLabel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Label added to task successfully"})
 }
 
-// RemoveLabel удаляет метку с задачи
 func (h *TaskHandler) RemoveLabel(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -987,7 +874,6 @@ func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -995,7 +881,6 @@ func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID метки из URL
 	labelIDStr := c.Param("label_id")
 	labelID, err := uuid.Parse(labelIDStr)
 	if err != nil {
@@ -1003,7 +888,6 @@ func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -1014,21 +898,18 @@ func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права владельца
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -1040,7 +921,6 @@ func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 		return
 	}
 
-	// Удаляем метку с задачи
 	if err := h.taskRepo.RemoveLabel(c.Request.Context(), taskID, labelID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove label from task"})
 		return
@@ -1049,9 +929,7 @@ func (h *TaskHandler) RemoveLabel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Label removed from task successfully"})
 }
 
-// GetTaskLabels получает все метки задачи
 func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -1064,7 +942,6 @@ func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -1072,7 +949,6 @@ func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу с метками
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -1083,21 +959,18 @@ func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleViewer)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права владельца
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -1109,14 +982,12 @@ func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 		return
 	}
 
-	// Получаем метки задачи
 	taskWithLabels, err := h.taskRepo.GetTasksWithLabels(c.Request.Context(), column.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve task labels"})
 		return
 	}
 
-	// Ищем нужную задачу в списке
 	var labels []LabelResponse
 	for _, t := range taskWithLabels {
 		if t.ID == taskID {
@@ -1134,9 +1005,7 @@ func (h *TaskHandler) GetTaskLabels(c *gin.Context) {
 	c.JSON(http.StatusOK, labels)
 }
 
-// SetDueDate устанавливает срок выполнения задачи
 func (h *TaskHandler) SetDueDate(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -1149,7 +1018,6 @@ func (h *TaskHandler) SetDueDate(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID задачи из URL
 	taskIDStr := c.Param("id")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
@@ -1157,7 +1025,6 @@ func (h *TaskHandler) SetDueDate(c *gin.Context) {
 		return
 	}
 
-	// Получаем задачу
 	task, err := h.taskRepo.GetByID(c.Request.Context(), taskID)
 	if err != nil {
 		if err == repository.ErrTaskNotFound {
@@ -1168,21 +1035,18 @@ func (h *TaskHandler) SetDueDate(c *gin.Context) {
 		return
 	}
 
-	// Получаем колонку, чтобы найти ID доски
 	column, err := h.columnRepo.GetByID(c.Request.Context(), task.ColumnID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve column"})
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), column.BoardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
 		return
 	}
 
-	// Получаем доску, чтобы проверить права владельца
 	board, err := h.boardRepo.GetByID(c.Request.Context(), column.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -1194,7 +1058,6 @@ func (h *TaskHandler) SetDueDate(c *gin.Context) {
 		return
 	}
 
-	// Парсим запрос
 	var req struct {
 		DueDate *time.Time `json:"due_date"`
 	}
@@ -1203,14 +1066,12 @@ func (h *TaskHandler) SetDueDate(c *gin.Context) {
 		return
 	}
 
-	// Обновляем срок выполнения задачи
 	task.DueDate = req.DueDate
 	if err := h.taskRepo.Update(c.Request.Context(), task); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task due date"})
 		return
 	}
 
-	// Формируем ответ
 	response := TaskResponse{
 		ID:          task.ID.String(),
 		Title:       task.Title,

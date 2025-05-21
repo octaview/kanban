@@ -12,6 +12,7 @@ import (
 )
 
 // CreateLabelRequest defines the expected request body for creating a label
+// @name CreateLabelRequest
 type CreateLabelRequest struct {
 	BoardID string `json:"board_id" binding:"required"`
 	Name    string `json:"name" binding:"required"`
@@ -19,9 +20,18 @@ type CreateLabelRequest struct {
 }
 
 // UpdateLabelRequest defines the expected request body for updating a label
+// @name UpdateLabelRequest
 type UpdateLabelRequest struct {
 	Name  string `json:"name" binding:"required"`
 	Color string `json:"color" binding:"required"`
+}
+
+// LabelResponse represents a label in response format
+// @name LabelResponse
+type LabelResponse struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 // LabelHandler handles label-related HTTP requests
@@ -45,8 +55,21 @@ func NewLabelHandler(
 }
 
 // Create creates a new label
+// @Summary Create label
+// @Description Create a new label for a board
+// @Tags Labels
+// @Accept json
+// @Produce json
+// @Param input body CreateLabelRequest true "Label data"
+// @Success 201 {object} LabelResponse
+// @Failure 400 {object} object "Invalid request"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Insufficient permissions"
+// @Failure 404 {object} object "Board not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security BearerAuth
+// @Router /labels [post]
 func (h *LabelHandler) Create(c *gin.Context) {
-	// Get user ID from context
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -59,21 +82,18 @@ func (h *LabelHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Parse request body
 	var req CreateLabelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
 	}
 
-	// Parse board ID
 	boardID, err := uuid.Parse(req.BoardID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid board ID format"})
 		return
 	}
 
-	// Check if board exists
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
 		if err == repository.ErrBoardNotFound {
@@ -84,7 +104,6 @@ func (h *LabelHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Check access rights
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, authenticatedUserID, model.RoleEditor)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -96,7 +115,6 @@ func (h *LabelHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Create new label
 	label := &model.Label{
 		BoardID: boardID,
 		Name:    req.Name,
@@ -116,8 +134,20 @@ func (h *LabelHandler) Create(c *gin.Context) {
 }
 
 // GetByID retrieves a label by its ID
+// @Summary Get label by ID
+// @Description Get a specific label by its ID
+// @Tags Labels
+// @Produce json
+// @Param id path string true "Label ID"
+// @Success 200 {object} LabelResponse
+// @Failure 400 {object} object "Invalid label ID"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Insufficient permissions"
+// @Failure 404 {object} object "Label not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security BearerAuth
+// @Router /labels/{id} [get]
 func (h *LabelHandler) GetByID(c *gin.Context) {
-	// Get user ID from context
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -130,7 +160,6 @@ func (h *LabelHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Parse label ID
 	labelIDStr := c.Param("id")
 	labelID, err := uuid.Parse(labelIDStr)
 	if err != nil {
@@ -138,7 +167,6 @@ func (h *LabelHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Get label
 	label, err := h.labelRepo.GetByID(c.Request.Context(), labelID)
 	if err != nil {
 		if err == repository.ErrLabelNotFound {
@@ -149,7 +177,6 @@ func (h *LabelHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	// Check access rights
 	board, err := h.boardRepo.GetByID(c.Request.Context(), label.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -175,8 +202,20 @@ func (h *LabelHandler) GetByID(c *gin.Context) {
 }
 
 // GetByBoardID retrieves all labels for a specific board
+// @Summary Get board labels
+// @Description Get all labels for a specific board
+// @Tags Labels
+// @Produce json
+// @Param id path string true "Board ID"
+// @Success 200 {array} LabelResponse
+// @Failure 400 {object} object "Invalid board ID"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Insufficient permissions"
+// @Failure 404 {object} object "Board not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security BearerAuth
+// @Router /boards/{id}/labels [get]
 func (h *LabelHandler) GetByBoardID(c *gin.Context) {
-	// Get user ID from context
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -189,7 +228,6 @@ func (h *LabelHandler) GetByBoardID(c *gin.Context) {
 		return
 	}
 
-	// Parse board ID
 	boardIDStr := c.Param("id")
 	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
@@ -197,7 +235,6 @@ func (h *LabelHandler) GetByBoardID(c *gin.Context) {
 		return
 	}
 
-	// Check if board exists
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
 		if err == repository.ErrBoardNotFound {
@@ -208,7 +245,6 @@ func (h *LabelHandler) GetByBoardID(c *gin.Context) {
 		return
 	}
 
-	// Check access rights
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, authenticatedUserID, model.RoleViewer)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -220,14 +256,12 @@ func (h *LabelHandler) GetByBoardID(c *gin.Context) {
 		return
 	}
 
-	// Get labels
 	labels, err := h.labelRepo.GetByBoardID(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve labels"})
 		return
 	}
 
-	// Prepare response
 	response := make([]LabelResponse, len(labels))
 	for i, label := range labels {
 		response[i] = LabelResponse{
@@ -241,8 +275,22 @@ func (h *LabelHandler) GetByBoardID(c *gin.Context) {
 }
 
 // Update updates an existing label
+// @Summary Update label
+// @Description Update an existing label
+// @Tags Labels
+// @Accept json
+// @Produce json
+// @Param id path string true "Label ID"
+// @Param input body UpdateLabelRequest true "Updated label data"
+// @Success 200 {object} LabelResponse
+// @Failure 400 {object} object "Invalid request"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Insufficient permissions"
+// @Failure 404 {object} object "Label not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security BearerAuth
+// @Router /labels/{id} [put]
 func (h *LabelHandler) Update(c *gin.Context) {
-	// Get user ID from context
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -255,7 +303,6 @@ func (h *LabelHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Parse label ID
 	labelIDStr := c.Param("id")
 	labelID, err := uuid.Parse(labelIDStr)
 	if err != nil {
@@ -263,7 +310,6 @@ func (h *LabelHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Get existing label
 	label, err := h.labelRepo.GetByID(c.Request.Context(), labelID)
 	if err != nil {
 		if err == repository.ErrLabelNotFound {
@@ -274,7 +320,6 @@ func (h *LabelHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Check access rights
 	board, err := h.boardRepo.GetByID(c.Request.Context(), label.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -292,14 +337,12 @@ func (h *LabelHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Parse request body
 	var req UpdateLabelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
 	}
 
-	// Update label
 	label.Name = req.Name
 	label.Color = req.Color
 
@@ -316,8 +359,20 @@ func (h *LabelHandler) Update(c *gin.Context) {
 }
 
 // Delete removes a label
+// @Summary Delete label
+// @Description Delete an existing label
+// @Tags Labels
+// @Produce json
+// @Param id path string true "Label ID"
+// @Success 200 {object} object{message=string}
+// @Failure 400 {object} object "Invalid label ID"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Insufficient permissions"
+// @Failure 404 {object} object "Label not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security BearerAuth
+// @Router /labels/{id} [delete]
 func (h *LabelHandler) Delete(c *gin.Context) {
-	// Get user ID from context
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -330,7 +385,6 @@ func (h *LabelHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Parse label ID
 	labelIDStr := c.Param("id")
 	labelID, err := uuid.Parse(labelIDStr)
 	if err != nil {
@@ -338,7 +392,6 @@ func (h *LabelHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Get label
 	label, err := h.labelRepo.GetByID(c.Request.Context(), labelID)
 	if err != nil {
 		if err == repository.ErrLabelNotFound {
@@ -349,7 +402,6 @@ func (h *LabelHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Check access rights
 	board, err := h.boardRepo.GetByID(c.Request.Context(), label.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -367,7 +419,6 @@ func (h *LabelHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	// Delete label
 	if err := h.labelRepo.Delete(c.Request.Context(), labelID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete label"})
 		return
@@ -377,8 +428,20 @@ func (h *LabelHandler) Delete(c *gin.Context) {
 }
 
 // GetTasksWithLabel retrieves all tasks that have a specific label
+// @Summary Get tasks with label
+// @Description Get all tasks that have a specific label
+// @Tags Labels
+// @Produce json
+// @Param id path string true "Label ID"
+// @Success 200 {array} object{id=string,title=string,description=string,column_id=string}
+// @Failure 400 {object} object "Invalid label ID"
+// @Failure 401 {object} object "Not authenticated"
+// @Failure 403 {object} object "Insufficient permissions"
+// @Failure 404 {object} object "Label not found"
+// @Failure 500 {object} object "Internal server error"
+// @Security BearerAuth
+// @Router /labels/{id}/tasks [get]
 func (h *LabelHandler) GetTasksWithLabel(c *gin.Context) {
-	// Get user ID from context
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -391,7 +454,6 @@ func (h *LabelHandler) GetTasksWithLabel(c *gin.Context) {
 		return
 	}
 
-	// Parse label ID
 	labelIDStr := c.Param("id")
 	labelID, err := uuid.Parse(labelIDStr)
 	if err != nil {
@@ -399,7 +461,6 @@ func (h *LabelHandler) GetTasksWithLabel(c *gin.Context) {
 		return
 	}
 
-	// Get label
 	label, err := h.labelRepo.GetByID(c.Request.Context(), labelID)
 	if err != nil {
 		if err == repository.ErrLabelNotFound {
@@ -410,7 +471,6 @@ func (h *LabelHandler) GetTasksWithLabel(c *gin.Context) {
 		return
 	}
 
-	// Check access rights
 	board, err := h.boardRepo.GetByID(c.Request.Context(), label.BoardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -428,14 +488,13 @@ func (h *LabelHandler) GetTasksWithLabel(c *gin.Context) {
 		return
 	}
 
-	// Get tasks with label
 	tasks, err := h.labelRepo.GetTasksWithLabel(c.Request.Context(), labelID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
 		return
 	}
 
-	// Prepare response (using a simplified task response for brevity)
+	// Prepare response
 	type TaskResponse struct {
 		ID          string `json:"id"`
 		Title       string `json:"title"`
