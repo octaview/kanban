@@ -63,7 +63,6 @@ type BoardShareResponse struct {
 // @Security ApiKeyAuth
 // @Router /boards/{id}/share [post]
 func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -76,7 +75,6 @@ func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID доски из URL
 	boardIDStr := c.Param("id")
 	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
@@ -84,7 +82,6 @@ func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
 		return
 	}
 
-	// Получаем доску
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -96,20 +93,17 @@ func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, является ли пользователь владельцем доски
 	if board.OwnerID != authenticatedUserID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Only the board owner can share the board"})
 		return
 	}
 
-	// Парсим запрос
 	var req ShareBoardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Находим пользователя по email
 	targetUser, err := h.userRepo.FindByEmail(c.Request.Context(), req.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
@@ -121,13 +115,11 @@ func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
 		return
 	}
 
-	// Нельзя поделиться с самим собой
 	if targetUser.ID == authenticatedUserID {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot share board with yourself"})
 		return
 	}
 
-	// Предоставляем доступ
 	if err := h.boardShareRepo.ShareBoard(c.Request.Context(), boardID, targetUser.ID, req.Role); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to share board"})
 		return
@@ -161,7 +153,6 @@ func (h *BoardShareHandler) ShareBoard(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /boards/{id}/share/{user_id} [delete]
 func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -174,7 +165,6 @@ func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID доски из URL
 	boardIDStr := c.Param("id")
 	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
@@ -182,7 +172,6 @@ func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID пользователя для удаления из URL
 	targetUserIDStr := c.Param("user_id")
 	targetUserID, err := uuid.Parse(targetUserIDStr)
 	if err != nil {
@@ -190,7 +179,6 @@ func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
 		return
 	}
 
-	// Получаем доску
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -202,13 +190,11 @@ func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, является ли пользователь владельцем доски
 	if board.OwnerID != authenticatedUserID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Only the board owner can remove access"})
 		return
 	}
 
-	// Удаляем доступ
 	if err := h.boardShareRepo.RemoveShare(c.Request.Context(), boardID, targetUserID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove share"})
 		return
@@ -232,7 +218,6 @@ func (h *BoardShareHandler) RemoveShare(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /boards/{id}/share [get]
 func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -245,7 +230,6 @@ func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 		return
 	}
 
-	// Парсим ID доски из URL
 	boardIDStr := c.Param("id")
 	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
@@ -253,7 +237,6 @@ func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 		return
 	}
 
-	// Получаем доску
 	board, err := h.boardRepo.GetByID(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board"})
@@ -265,7 +248,6 @@ func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 		return
 	}
 
-	// Проверяем права доступа
 	hasAccess, err := h.boardShareRepo.CheckAccess(c.Request.Context(), boardID, authenticatedUserID, model.RoleViewer)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check access"})
@@ -277,17 +259,14 @@ func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 		return
 	}
 
-	// Получаем список пользователей с доступом
 	shares, err := h.boardShareRepo.GetBoardShares(c.Request.Context(), boardID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve board shares"})
 		return
 	}
 
-	// Формируем ответ
 	response := make([]BoardShareResponse, 0, len(shares)+1)
 
-	// Добавляем владельца
 	if board.OwnerID == authenticatedUserID {
 		response = append(response, BoardShareResponse{
 			UserID:  authenticatedUserID.String(),
@@ -298,7 +277,6 @@ func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 		})
 	}
 
-	// Добавляем остальных пользователей
 	for _, share := range shares {
 		response = append(response, BoardShareResponse{
 			UserID:  share.UserID.String(),
@@ -323,7 +301,6 @@ func (h *BoardShareHandler) GetBoardShares(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Router /me/shared-boards [get]
 func (h *BoardShareHandler) GetSharedBoards(c *gin.Context) {
-	// Получаем ID текущего пользователя из контекста
 	userID, exists := c.Get(middleware.UserIDKey)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
@@ -336,14 +313,12 @@ func (h *BoardShareHandler) GetSharedBoards(c *gin.Context) {
 		return
 	}
 
-	// Получаем доски с доступом
 	boards, err := h.boardShareRepo.GetSharedBoards(c.Request.Context(), authenticatedUserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve shared boards"})
 		return
 	}
 
-	// Формируем ответ
 	response := make([]BoardResponse, len(boards))
 	for i, board := range boards {
 		response[i] = BoardResponse{
